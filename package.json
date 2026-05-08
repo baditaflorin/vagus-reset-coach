@@ -9,9 +9,12 @@
     "pages-preview": "vite preview --host 127.0.0.1 --port 4173",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run",
+    "typecheck": "tsc -b",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run src",
     "test:watch": "vitest",
-    "smoke": "playwright test"
+    "smoke": "./scripts/smoke.sh"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.33.1-dev45.0",

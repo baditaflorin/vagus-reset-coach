@@ -1,0 +1,13 @@
+node_modules
+docs/assets
+docs/404.html
+docs/index.html
+docs/manifest.webmanifest
+docs/sw.js
+docs/workbox-*.js
+test-results
+playwright-report
+dist
+dist-data
+coverage
+tmp

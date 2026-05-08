@@ -1,26 +1,40 @@
-import { HeartHandshake, ShieldCheck, Star } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BreathAudio } from './features/breath/audio'
+import { HeartHandshake, ShieldCheck, Star } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BreathAudio } from "./features/breath/audio";
 import {
   DEFAULT_BREATH_SETTINGS,
   getBreathState,
   recommendBreathSettings,
   type BreathSettings,
   type BreathState,
-} from './features/breath/breath'
-import { PulseEstimator } from './features/rppg/rppg'
-import type { PulseMetrics } from './features/rppg/types'
-import { defaultFaceRoi, VideoFrameSampler } from './features/rppg/videoSampler'
-import { buildSessionRecord, summarizeInMemory, summarizeSessions } from './features/sessions/analytics'
-import { clearSessions, getSessions, saveSession } from './features/sessions/storage'
-import type { AnalyticsSummary, SessionRecord } from './features/sessions/types'
-import { BreathVisualizer } from './components/BreathVisualizer'
-import { CameraPanel } from './components/CameraPanel'
-import { MetricTile } from './components/MetricTile'
-import { SessionHistory } from './components/SessionHistory'
-import { formatMetric, formatTime } from './lib/format'
+} from "./features/breath/breath";
+import { PulseEstimator } from "./features/rppg/rppg";
+import type { PulseMetrics } from "./features/rppg/types";
+import {
+  defaultFaceRoi,
+  VideoFrameSampler,
+} from "./features/rppg/videoSampler";
+import {
+  buildSessionRecord,
+  summarizeInMemory,
+  summarizeSessions,
+} from "./features/sessions/analytics";
+import {
+  clearSessions,
+  getSessions,
+  saveSession,
+} from "./features/sessions/storage";
+import type {
+  AnalyticsSummary,
+  SessionRecord,
+} from "./features/sessions/types";
+import { BreathVisualizer } from "./components/BreathVisualizer";
+import { CameraPanel } from "./components/CameraPanel";
+import { MetricTile } from "./components/MetricTile";
+import { SessionHistory } from "./components/SessionHistory";
+import { formatMetric, formatTime } from "./lib/format";
 
-const SESSION_MS = 120_000
+const SESSION_MS = 120_000;
 const EMPTY_METRICS: PulseMetrics = {
   bpm: null,
   rmssdMs: null,
@@ -28,98 +42,110 @@ const EMPTY_METRICS: PulseMetrics = {
   sampleCount: 0,
   peakCount: 0,
   intervalsMs: [],
-  status: 'warming',
-}
+  status: "warming",
+};
 
 type ActiveSession = {
-  startedAt: Date
-  startedAtMs: number
-  baselineBpm: number | null
-  running: boolean
-}
+  startedAt: Date;
+  startedAtMs: number;
+  baselineBpm: number | null;
+  running: boolean;
+};
 
 function App() {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const samplerRef = useRef<VideoFrameSampler | null>(null)
-  const estimatorRef = useRef(new PulseEstimator())
-  const audioRef = useRef(new BreathAudio())
-  const metricsRef = useRef<PulseMetrics>(EMPTY_METRICS)
-  const sessionRef = useRef<ActiveSession | null>(null)
-  const lastPhaseRef = useRef<string | null>(null)
-  const settingsRef = useRef<BreathSettings>(DEFAULT_BREATH_SETTINGS)
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const samplerRef = useRef<VideoFrameSampler | null>(null);
+  const estimatorRef = useRef(new PulseEstimator());
+  const audioRef = useRef(new BreathAudio());
+  const metricsRef = useRef<PulseMetrics>(EMPTY_METRICS);
+  const sessionRef = useRef<ActiveSession | null>(null);
+  const lastPhaseRef = useRef<string | null>(null);
+  const settingsRef = useRef<BreathSettings>(DEFAULT_BREATH_SETTINGS);
 
-  const [cameraActive, setCameraActive] = useState(false)
-  const [cameraError, setCameraError] = useState<string | null>(null)
-  const [metrics, setMetrics] = useState<PulseMetrics>(EMPTY_METRICS)
-  const [breathSettings, setBreathSettings] = useState<BreathSettings>(DEFAULT_BREATH_SETTINGS)
-  const [breathState, setBreathState] = useState<BreathState>(() => getBreathState(0, DEFAULT_BREATH_SETTINGS))
-  const [running, setRunning] = useState(false)
-  const [elapsedMs, setElapsedMs] = useState(0)
-  const [audioEnabled, setAudioEnabled] = useState(true)
-  const [sessions, setSessions] = useState<SessionRecord[]>([])
-  const [analytics, setAnalytics] = useState<AnalyticsSummary>(() => summarizeInMemory([]))
-  const [lastRecord, setLastRecord] = useState<SessionRecord | null>(null)
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState<PulseMetrics>(EMPTY_METRICS);
+  const [breathSettings, setBreathSettings] = useState<BreathSettings>(
+    DEFAULT_BREATH_SETTINGS,
+  );
+  const [breathState, setBreathState] = useState<BreathState>(() =>
+    getBreathState(0, DEFAULT_BREATH_SETTINGS),
+  );
+  const [running, setRunning] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsSummary>(() =>
+    summarizeInMemory([]),
+  );
+  const [lastRecord, setLastRecord] = useState<SessionRecord | null>(null);
 
   useEffect(() => {
-    settingsRef.current = breathSettings
-  }, [breathSettings])
+    settingsRef.current = breathSettings;
+  }, [breathSettings]);
 
   const refreshHistory = useCallback(async () => {
-    const records = await getSessions()
-    setSessions(records)
-    setAnalytics(await summarizeSessions(records))
-  }, [])
+    const records = await getSessions();
+    setSessions(records);
+    setAnalytics(await summarizeSessions(records));
+  }, []);
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => void refreshHistory(), 0)
-    return () => window.clearTimeout(timeout)
-  }, [refreshHistory])
+    const timeout = window.setTimeout(() => void refreshHistory(), 0);
+    return () => window.clearTimeout(timeout);
+  }, [refreshHistory]);
 
   const startCamera = useCallback(async () => {
     if (streamRef.current) {
-      return true
+      return true;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError('This browser does not expose camera access. You can still use the breath pacer.')
-      return false
+      setCameraError(
+        "This browser does not expose camera access. You can still use the breath pacer.",
+      );
+      return false;
     }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
-          facingMode: 'user',
+          facingMode: "user",
           width: { ideal: 960 },
           height: { ideal: 720 },
           frameRate: { ideal: 30 },
         },
-      })
-      streamRef.current = stream
-      setCameraActive(true)
-      setCameraError(null)
+      });
+      streamRef.current = stream;
+      setCameraActive(true);
+      setCameraError(null);
       if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
-      return true
+      return true;
     } catch (error) {
-      setCameraError(error instanceof Error ? error.message : 'Camera permission was not granted.')
-      return false
+      setCameraError(
+        error instanceof Error
+          ? error.message
+          : "Camera permission was not granted.",
+      );
+      return false;
     }
-  }, [])
+  }, []);
 
   const finishSession = useCallback(async () => {
-    const active = sessionRef.current
+    const active = sessionRef.current;
     if (!active?.running) {
-      return
+      return;
     }
 
-    active.running = false
-    sessionRef.current = null
-    setRunning(false)
-    setElapsedMs(SESSION_MS)
-    const currentMetrics = metricsRef.current
+    active.running = false;
+    sessionRef.current = null;
+    setRunning(false);
+    setElapsedMs(SESSION_MS);
+    const currentMetrics = metricsRef.current;
     const record = buildSessionRecord({
       startedAt: active.startedAt,
       durationSec: SESSION_MS / 1_000,
@@ -128,128 +154,138 @@ function App() {
       rmssdMs: currentMetrics.rmssdMs,
       breathsPerMinute: settingsRef.current.breathsPerMinute,
       quality: currentMetrics.quality,
-    })
-    await saveSession(record)
-    setLastRecord(record)
-    await refreshHistory()
-  }, [refreshHistory])
+    });
+    await saveSession(record);
+    setLastRecord(record);
+    await refreshHistory();
+  }, [refreshHistory]);
 
   useEffect(() => {
     if (!streamRef.current && !running) {
-      return
+      return;
     }
 
     if (streamRef.current) {
-      samplerRef.current ??= new VideoFrameSampler()
+      samplerRef.current ??= new VideoFrameSampler();
     }
     const interval = window.setInterval(() => {
-      const video = videoRef.current
-      const sampler = samplerRef.current
+      const video = videoRef.current;
+      const sampler = samplerRef.current;
       if (video && sampler) {
-        const sample = sampler.sample(video, defaultFaceRoi())
+        const sample = sampler.sample(video, defaultFaceRoi());
         if (sample) {
-          const nextMetrics = estimatorRef.current.addSample(sample)
-          metricsRef.current = nextMetrics
-          setMetrics(nextMetrics)
+          const nextMetrics = estimatorRef.current.addSample(sample);
+          metricsRef.current = nextMetrics;
+          setMetrics(nextMetrics);
 
           if (sessionRef.current?.running && sample.timeMs % 4_000 < 120) {
-            const recommended = recommendBreathSettings(nextMetrics)
-            if (Math.abs(recommended.breathsPerMinute - settingsRef.current.breathsPerMinute) >= 0.2) {
-              settingsRef.current = recommended
-              setBreathSettings(recommended)
+            const recommended = recommendBreathSettings(nextMetrics);
+            if (
+              Math.abs(
+                recommended.breathsPerMinute -
+                  settingsRef.current.breathsPerMinute,
+              ) >= 0.2
+            ) {
+              settingsRef.current = recommended;
+              setBreathSettings(recommended);
             }
           }
         }
       }
 
-      const active = sessionRef.current
+      const active = sessionRef.current;
       if (!active?.running) {
-        return
+        return;
       }
 
-      const elapsed = performance.now() - active.startedAtMs
-      setElapsedMs(elapsed)
-      const nextBreathState = getBreathState(elapsed, settingsRef.current)
-      setBreathState(nextBreathState)
+      const elapsed = performance.now() - active.startedAtMs;
+      setElapsedMs(elapsed);
+      const nextBreathState = getBreathState(elapsed, settingsRef.current);
+      setBreathState(nextBreathState);
       if (nextBreathState.phase !== lastPhaseRef.current) {
-        lastPhaseRef.current = nextBreathState.phase
-        void audioRef.current.cue(nextBreathState.phase)
+        lastPhaseRef.current = nextBreathState.phase;
+        void audioRef.current.cue(nextBreathState.phase);
       }
       if (elapsed >= SESSION_MS) {
-        void finishSession()
+        void finishSession();
       }
-    }, 90)
+    }, 90);
 
-    return () => window.clearInterval(interval)
-  }, [finishSession, cameraActive, running])
+    return () => window.clearInterval(interval);
+  }, [finishSession, cameraActive, running]);
 
   useEffect(() => {
-    const audio = audioRef.current
+    const audio = audioRef.current;
     return () => {
-      streamRef.current?.getTracks().forEach((track) => track.stop())
-      void audio.close()
-    }
-  }, [])
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      void audio.close();
+    };
+  }, []);
 
   const beginSession = useCallback(async () => {
-    await startCamera()
-    const now = performance.now()
+    await startCamera();
+    const now = performance.now();
     sessionRef.current = {
       startedAt: new Date(),
       startedAtMs: now,
       baselineBpm: metricsRef.current.bpm,
       running: true,
-    }
-    setLastRecord(null)
-    setElapsedMs(0)
-    setRunning(true)
-    lastPhaseRef.current = null
-    setBreathState(getBreathState(0, settingsRef.current))
-  }, [startCamera])
+    };
+    setLastRecord(null);
+    setElapsedMs(0);
+    setRunning(true);
+    lastPhaseRef.current = null;
+    setBreathState(getBreathState(0, settingsRef.current));
+  }, [startCamera]);
 
   const stopSession = useCallback(() => {
     if (sessionRef.current) {
-      sessionRef.current.running = false
-      sessionRef.current = null
+      sessionRef.current.running = false;
+      sessionRef.current = null;
     }
-    setRunning(false)
-  }, [])
+    setRunning(false);
+  }, []);
 
   const toggleAudio = useCallback(() => {
-    const next = !audioEnabled
-    setAudioEnabled(next)
-    audioRef.current.setEnabled(next)
-  }, [audioEnabled])
+    const next = !audioEnabled;
+    setAudioEnabled(next);
+    audioRef.current.setEnabled(next);
+  }, [audioEnabled]);
 
   const clearHistory = useCallback(async () => {
-    if (sessions.length === 0 || !window.confirm('Clear all local session records?')) {
-      return
+    if (
+      sessions.length === 0 ||
+      !window.confirm("Clear all local session records?")
+    ) {
+      return;
     }
-    await clearSessions()
-    setLastRecord(null)
-    await refreshHistory()
-  }, [refreshHistory, sessions.length])
+    await clearSessions();
+    setLastRecord(null);
+    await refreshHistory();
+  }, [refreshHistory, sessions.length]);
 
   const exportHistory = useCallback(() => {
-    const blob = new Blob([JSON.stringify(sessions, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'vagus-reset-sessions.json'
-    link.click()
-    URL.revokeObjectURL(url)
-  }, [sessions])
+    const blob = new Blob([JSON.stringify(sessions, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "vagus-reset-sessions.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [sessions]);
 
-  const remainingLabel = formatTime((SESSION_MS - elapsedMs) / 1_000)
+  const remainingLabel = formatTime((SESSION_MS - elapsedMs) / 1_000);
   const signalLabel = useMemo(() => {
-    if (metrics.status === 'ready') {
-      return 'rPPG ready'
+    if (metrics.status === "ready") {
+      return "rPPG ready";
     }
-    if (metrics.status === 'low-quality') {
-      return 'improve light'
+    if (metrics.status === "low-quality") {
+      return "improve light";
     }
-    return 'warming signal'
-  }, [metrics.status])
+    return "warming signal";
+  }, [metrics.status]);
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -259,11 +295,19 @@ function App() {
           <h1>Vagus Reset Coach</h1>
         </div>
         <nav className="top-actions" aria-label="Project links">
-          <a href="https://github.com/baditaflorin/vagus-reset-coach" target="_blank" rel="noreferrer">
+          <a
+            href="https://github.com/baditaflorin/vagus-reset-coach"
+            target="_blank"
+            rel="noreferrer"
+          >
             <Star size={18} />
             GitHub
           </a>
-          <a href="https://www.paypal.com/paypalme/florinbadita" target="_blank" rel="noreferrer">
+          <a
+            href="https://www.paypal.com/paypalme/florinbadita"
+            target="_blank"
+            rel="noreferrer"
+          >
             <HeartHandshake size={18} />
             PayPal
           </a>
@@ -278,8 +322,9 @@ function App() {
                 <p className="eyebrow">Two-minute protocol</p>
                 <h2 className="coach-title">Reset stress without a wearable</h2>
                 <p className="mt-3 max-w-2xl text-base leading-7 text-stone-700">
-                  Keep your face inside the guide, breathe with the pacer, and let the app estimate
-                  pulse variability from tiny color shifts in the webcam image.
+                  Keep your face inside the guide, breathe with the pacer, and
+                  let the app estimate pulse variability from tiny color shifts
+                  in the webcam image.
                 </p>
               </div>
               <span className="privacy-badge">
@@ -313,13 +358,13 @@ function App() {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricTile
               label="Heart rate"
-              value={formatMetric(metrics.bpm, ' bpm')}
+              value={formatMetric(metrics.bpm, " bpm")}
               detail={signalLabel}
               tone="teal"
             />
             <MetricTile
               label="HRV RMSSD"
-              value={formatMetric(metrics.rmssdMs, ' ms')}
+              value={formatMetric(metrics.rmssdMs, " ms")}
               detail={`${metrics.peakCount} detected pulse peaks`}
               tone="coral"
             />
@@ -342,10 +387,12 @@ function App() {
           {lastRecord && (
             <section className="panel border-teal-700/30 bg-teal-50">
               <p className="eyebrow">Last reset</p>
-              <h2 className="section-title">{lastRecord.coherenceScore}/100 coherence</h2>
+              <h2 className="section-title">
+                {lastRecord.coherenceScore}/100 coherence
+              </h2>
               <p className="mt-2 text-sm leading-6 text-teal-950/75">
-                Ending HR {lastRecord.endingBpm ?? 'n/a'} bpm · RMSSD {lastRecord.rmssdMs ?? 'n/a'} ms ·
-                local record saved.
+                Ending HR {lastRecord.endingBpm ?? "n/a"} bpm · RMSSD{" "}
+                {lastRecord.rmssdMs ?? "n/a"} ms · local record saved.
               </p>
             </section>
           )}
@@ -360,16 +407,18 @@ function App() {
           <section className="panel">
             <p className="eyebrow">Build</p>
             <h2 className="section-title">Version {__APP_VERSION__}</h2>
-            <p className="mt-2 text-sm text-stone-600">Commit {__APP_COMMIT__}</p>
+            <p className="mt-2 text-sm text-stone-600">
+              Commit {__APP_COMMIT__}
+            </p>
             <p className="mt-4 text-sm leading-6 text-stone-600">
-              Educational wellness software only. It is not a medical device and does not diagnose,
-              treat, or prevent disease.
+              Educational wellness software only. It is not a medical device and
+              does not diagnose, treat, or prevent disease.
             </p>
           </section>
         </aside>
       </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

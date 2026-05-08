@@ -1,4 +1,4 @@
-import { copyFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, writeFileSync } from "node:fs";
 
-copyFileSync('docs/index.html', 'docs/404.html')
-writeFileSync('docs/.nojekyll', '\n')
+copyFileSync("docs/index.html", "docs/404.html");
+writeFileSync("docs/.nojekyll", "\n");
