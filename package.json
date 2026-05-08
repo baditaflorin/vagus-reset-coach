@@ -5,9 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && node scripts/prepare-pages.js && vite build && node scripts/postbuild.js",
+    "pages-preview": "vite preview --host 127.0.0.1 --port 4173",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "playwright test"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.33.1-dev45.0",
