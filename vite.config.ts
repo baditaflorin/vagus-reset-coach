@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 
@@ -11,14 +10,6 @@ const pkg = JSON.parse(
 ) as {
   version: string;
 };
-
-function gitCommit() {
-  try {
-    return execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
-  } catch {
-    return "local";
-  }
-}
 
 export default defineConfig({
   base: "/vagus-reset-coach/",
@@ -57,7 +48,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(
       process.env.VITE_APP_VERSION ?? pkg.version,
     ),
-    __APP_COMMIT__: JSON.stringify(process.env.VITE_APP_COMMIT ?? gitCommit()),
+    __APP_COMMIT__: JSON.stringify(process.env.VITE_APP_COMMIT ?? "local"),
   },
   resolve: {
     alias: {

@@ -80,6 +80,7 @@ function App() {
     summarizeInMemory([]),
   );
   const [lastRecord, setLastRecord] = useState<SessionRecord | null>(null);
+  const [displayCommit, setDisplayCommit] = useState(__APP_COMMIT__);
 
   useEffect(() => {
     settingsRef.current = breathSettings;
@@ -95,6 +96,33 @@ function App() {
     const timeout = window.setTimeout(() => void refreshHistory(), 0);
     return () => window.clearTimeout(timeout);
   }, [refreshHistory]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadCommit = async () => {
+      if (!window.location.hostname.endsWith("github.io")) {
+        return;
+      }
+      try {
+        const response = await fetch(
+          "https://api.github.com/repos/baditaflorin/vagus-reset-coach/commits/main",
+        );
+        if (!response.ok) {
+          return;
+        }
+        const body = (await response.json()) as { sha?: string };
+        if (!cancelled && body.sha) {
+          setDisplayCommit(body.sha.slice(0, 7));
+        }
+      } catch {
+        // The local fallback keeps offline and rate-limited sessions usable.
+      }
+    };
+    void loadCommit();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const startCamera = useCallback(async () => {
     if (streamRef.current) {
@@ -408,7 +436,7 @@ function App() {
             <p className="eyebrow">Build</p>
             <h2 className="section-title">Version {__APP_VERSION__}</h2>
             <p className="mt-2 text-sm text-stone-600">
-              Commit {__APP_COMMIT__}
+              Commit {displayCommit}
             </p>
             <p className="mt-4 text-sm leading-6 text-stone-600">
               Educational wellness software only. It is not a medical device and

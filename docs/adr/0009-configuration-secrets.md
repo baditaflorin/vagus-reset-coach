@@ -10,7 +10,7 @@ The frontend must never hold secrets.
 
 ## Decision
 
-Only public build metadata is configured: `VITE_APP_VERSION` and `VITE_APP_COMMIT`, with git-derived defaults. `.env*` files are ignored except `.env.example`.
+Only public build metadata is configured: `VITE_APP_VERSION` and optional `VITE_APP_COMMIT`. The live commit display uses GitHub's public commits API, which requires no secret. `.env*` files are ignored except `.env.example`.
 
 ## Consequences
 
