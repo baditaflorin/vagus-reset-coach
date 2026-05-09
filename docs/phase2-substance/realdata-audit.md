@@ -71,3 +71,24 @@ Scope: v1 `vagus-reset-coach`, Mode A GitHub Pages app. The product's primary "i
 - No backend, accounts, cloud sync, wearable integrations, or analytics.
 - No clinical claims or medical-grade validation.
 - No Phase 3 polish items such as command palettes, onboarding tours, or social sharing.
+
+## After Implementation Check
+
+Date: 2026-05-09
+
+The real-data fixtures now exercise deterministic signal diagnostics, confidence labels, reason codes, malformed-history recovery, and huge-trace behavior. This table tracks whether each input still risks silent or wrong-confident output.
+
+| #   | Fixture                              | Expected Phase 2 behavior                                     | Result |
+| --- | ------------------------------------ | ------------------------------------------------------------- | ------ |
+| 1   | Clean daylight                       | Ready, high confidence, usable-face-signal                    | Pass   |
+| 2   | Dim warm room                        | Not ready, low confidence, too-dark                           | Pass   |
+| 3   | Backlit window                       | Not ready, low confidence, glare-or-backlight and too-dark    | Pass   |
+| 4   | Glasses reflection                   | Not ready, medium confidence, glare-or-backlight              | Pass   |
+| 5   | Face drift                           | Not ready, low confidence, face-not-centered                  | Pass   |
+| 6   | Multiple faces or subject not locked | Not ready, low confidence, subject-not-locked                 | Pass   |
+| 7   | Camera denied                        | Breath-only mode, zero measurement confidence                 | Pass   |
+| 8   | No warm-up                           | Not ready, low confidence, warming-up                         | Pass   |
+| 9   | Handheld mobile motion               | Not ready, low confidence, too-much-motion                    | Pass   |
+| 10  | Malformed local history              | Valid records retained, invalid records counted and explained | Pass   |
+
+Pass rate against the Phase 2 "no silent wrongness" bar: 10/10 fixtures. The remaining limitation is that fixtures model ROI diagnostics and storage recovery; they do not prove clinical HRV accuracy or automatic face detection.

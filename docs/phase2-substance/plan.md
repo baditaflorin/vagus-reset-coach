@@ -43,3 +43,4 @@ Ranked by impact on the real-data audit, not implementation novelty.
 
 - Before implementation: 4/10 inputs have visible or wrong-confident failures.
 - Target after implementation: at least 7/10 pass without wrong-confident output.
+- After implementation: 10/10 real-data fixtures pass the deterministic "no silent wrongness" checks. Remaining risk is rPPG accuracy in live camera conditions outside the fixture model.
