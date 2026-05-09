@@ -1,10 +1,10 @@
 import { Camera, Play, Square, Volume2, VolumeX } from "lucide-react";
 import type { RefObject } from "react";
-import type { PulseMetrics } from "../features/rppg/types";
+import type { SignalDiagnostics } from "../features/rppg/types";
 
 type CameraPanelProps = {
   videoRef: RefObject<HTMLVideoElement | null>;
-  metrics: PulseMetrics;
+  diagnostics: SignalDiagnostics;
   cameraActive: boolean;
   running: boolean;
   audioEnabled: boolean;
@@ -17,7 +17,7 @@ type CameraPanelProps = {
 
 export function CameraPanel({
   videoRef,
-  metrics,
+  diagnostics,
   cameraActive,
   running,
   audioEnabled,
@@ -27,7 +27,7 @@ export function CameraPanel({
   onStopSession,
   onToggleAudio,
 }: CameraPanelProps) {
-  const quality = Math.round(metrics.quality * 100);
+  const quality = Math.round(diagnostics.confidence * 100);
 
   return (
     <section className="panel">
@@ -37,7 +37,9 @@ export function CameraPanel({
           <h2 className="section-title">Face pulse reader</h2>
         </div>
         <span className={`status-pill ${cameraActive ? "status-pill-on" : ""}`}>
-          {cameraActive ? `${quality}% signal` : "camera off"}
+          {cameraActive
+            ? `${quality}% ${diagnostics.confidenceLabel}`
+            : "camera off"}
         </span>
       </div>
 
@@ -52,6 +54,11 @@ export function CameraPanel({
       {error && (
         <p className="mt-3 rounded-lg border border-coral/30 bg-orange-50 p-3 text-sm text-orange-950">
           {error}
+        </p>
+      )}
+      {!error && (
+        <p className="mt-3 rounded-lg border border-stone-200 bg-white p-3 text-sm leading-6 text-stone-700">
+          {diagnostics.primaryMessage} {diagnostics.nextStep}
         </p>
       )}
 

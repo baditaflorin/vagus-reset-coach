@@ -11,6 +11,7 @@ type DuckDbSummaryRow = {
   average_rmssd_ms: number | null;
   best_coherence: number;
   last_seven_average: number;
+  low_confidence_count: number | bigint;
 };
 
 const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
@@ -44,6 +45,7 @@ export async function summarizeSessionsWithDuckDb(
           SELECT
             coherenceScore,
             rmssdMs,
+            confidenceLabel,
             row_number() OVER (ORDER BY startedAt DESC) AS recency
           FROM sessions
         )
@@ -52,7 +54,8 @@ export async function summarizeSessionsWithDuckDb(
           avg(coherenceScore) AS average_coherence,
           avg(rmssdMs) AS average_rmssd_ms,
           max(coherenceScore) AS best_coherence,
-          avg(CASE WHEN recency <= 7 THEN coherenceScore ELSE NULL END) AS last_seven_average
+          avg(CASE WHEN recency <= 7 THEN coherenceScore ELSE NULL END) AS last_seven_average,
+          sum(CASE WHEN confidenceLabel = 'low' THEN 1 ELSE 0 END) AS low_confidence_count
         FROM ranked
       `);
       const row = normalizeRow(result.toArray()[0]) as DuckDbSummaryRow;
@@ -65,6 +68,7 @@ export async function summarizeSessionsWithDuckDb(
             : Math.round(row.average_rmssd_ms),
         bestCoherence: Math.round(row.best_coherence ?? 0),
         lastSevenAverage: Math.round(row.last_seven_average ?? 0),
+        lowConfidenceCount: Number(row.low_confidence_count ?? 0),
       };
     } finally {
       await connection.close();

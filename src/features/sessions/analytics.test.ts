@@ -62,5 +62,22 @@ function session(
     breathsPerMinute: 6,
     coherenceScore,
     quality: 0.8,
+    measurementConfidence: 0.8,
+    confidenceLabel: "high",
+    qualityReasons: ["usable-face-signal"],
+    fieldConfidence: {
+      baselineBpm: 0.8,
+      endingBpm: 0.8,
+      rmssdMs: 0.8,
+      coherenceScore: 0.8,
+    },
+    provenance: {
+      appVersion: "0.1.0",
+      schemaVersion: 1,
+      algorithmVersion: "rppg-v2",
+      generatedAt: "2026-05-08T08:00:00.000Z",
+      source: "webcam-rppg",
+      reasonCodes: ["usable-face-signal"],
+    },
   };
 }

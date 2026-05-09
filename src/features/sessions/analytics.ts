@@ -1,4 +1,5 @@
 import type { AnalyticsSummary, SessionRecord } from "./types";
+import type { SignalDiagnostics } from "../rppg/types";
 
 export async function summarizeSessions(
   sessions: SessionRecord[],
@@ -27,6 +28,9 @@ export function summarizeInMemory(sessions: SessionRecord[]): AnalyticsSummary {
   const lastSeven = sessions
     .slice(0, 7)
     .map((session) => session.coherenceScore);
+  const lowConfidenceCount = sessions.filter(
+    (session) => session.confidenceLabel === "low",
+  ).length;
 
   return {
     sessionCount: sessions.length,
@@ -35,6 +39,7 @@ export function summarizeInMemory(sessions: SessionRecord[]): AnalyticsSummary {
       rmssdValues.length === 0 ? null : Math.round(average(rmssdValues)),
     bestCoherence: Math.max(...coherenceScores),
     lastSevenAverage: Math.round(average(lastSeven)),
+    lowConfidenceCount,
   };
 }
 
@@ -46,15 +51,41 @@ export function buildSessionRecord(input: {
   rmssdMs: number | null;
   breathsPerMinute: number;
   quality: number;
+  diagnostics?: SignalDiagnostics;
+  appVersion?: string;
 }): SessionRecord {
+  const measurementConfidence = roundTo(
+    input.diagnostics?.confidence ?? input.quality,
+    2,
+  );
+  const confidenceLabel =
+    input.diagnostics?.confidenceLabel ??
+    (measurementConfidence >= 0.72
+      ? "high"
+      : measurementConfidence >= 0.48
+        ? "medium"
+        : "low");
   const bpmDrop =
     input.baselineBpm !== null && input.endingBpm !== null
       ? Math.max(-8, Math.min(14, input.baselineBpm - input.endingBpm))
       : 0;
-  const rmssdScore = input.rmssdMs === null ? 24 : Math.min(45, input.rmssdMs);
-  const coherenceScore = Math.round(
+  const rmssdScore = input.rmssdMs === null ? 12 : Math.min(45, input.rmssdMs);
+  const rawCoherenceScore = Math.round(
     clamp(35 + bpmDrop * 2.2 + rmssdScore * 0.75 + input.quality * 18, 0, 100),
   );
+  const coherenceScore =
+    confidenceLabel === "low"
+      ? Math.min(rawCoherenceScore, 55)
+      : rawCoherenceScore;
+  const reasonCodes = input.diagnostics?.reasonCodes ?? [];
+  const fieldConfidence = input.diagnostics?.fieldConfidence ?? {
+    bpm: input.endingBpm === null ? 0 : measurementConfidence,
+    rmssdMs: input.rmssdMs === null ? 0 : measurementConfidence,
+    coherenceScore:
+      confidenceLabel === "low"
+        ? Math.min(measurementConfidence, 0.4)
+        : measurementConfidence,
+  };
 
   return {
     id: crypto.randomUUID(),
@@ -67,6 +98,26 @@ export function buildSessionRecord(input: {
     breathsPerMinute: input.breathsPerMinute,
     coherenceScore,
     quality: roundTo(input.quality, 2),
+    measurementConfidence,
+    confidenceLabel,
+    qualityReasons: reasonCodes,
+    fieldConfidence: {
+      baselineBpm: input.baselineBpm === null ? 0 : fieldConfidence.bpm,
+      endingBpm: input.endingBpm === null ? 0 : fieldConfidence.bpm,
+      rmssdMs: fieldConfidence.rmssdMs,
+      coherenceScore: fieldConfidence.coherenceScore,
+    },
+    provenance: {
+      appVersion: input.appVersion ?? "unknown",
+      schemaVersion: 1,
+      algorithmVersion: "rppg-v2",
+      generatedAt: new Date().toISOString(),
+      source:
+        input.diagnostics?.mode === "breath-only"
+          ? "breath-only"
+          : "webcam-rppg",
+      reasonCodes,
+    },
   };
 }
 
@@ -77,6 +128,7 @@ function emptySummary(): AnalyticsSummary {
     averageRmssdMs: null,
     bestCoherence: 0,
     lastSevenAverage: 0,
+    lowConfidenceCount: 0,
   };
 }
 

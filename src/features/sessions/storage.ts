@@ -1,4 +1,8 @@
-import { sessionRecordSchema, type SessionRecord } from "./types";
+import {
+  sessionRecordSchema,
+  type SessionLoadReport,
+  type SessionRecord,
+} from "./types";
 
 const DB_NAME = "vagus-reset-coach";
 const DB_VERSION = 1;
@@ -14,16 +18,35 @@ export async function saveSession(record: SessionRecord) {
 }
 
 export async function getSessions(): Promise<SessionRecord[]> {
+  return (await getSessionLoadReport()).records;
+}
+
+export async function getSessionLoadReport(): Promise<SessionLoadReport> {
   const db = await openDatabase();
-  const records = await requestToPromise<SessionRecord[]>(
+  const records = await requestToPromise<unknown[]>(
     db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).getAll(),
   );
   db.close();
-  return records
-    .map((record) => sessionRecordSchema.safeParse(record))
-    .filter((result) => result.success)
-    .map((result) => result.data)
-    .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt));
+  return normalizeSessionRecords(records);
+}
+
+export function normalizeSessionRecords(records: unknown[]): SessionLoadReport {
+  let skippedRecords = 0;
+  const parsedRecords = records.flatMap((record) => {
+    const result = sessionRecordSchema.safeParse(record);
+    if (!result.success) {
+      skippedRecords += 1;
+      return [];
+    }
+    return [result.data];
+  });
+
+  return {
+    records: parsedRecords.sort(
+      (a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt),
+    ),
+    skippedRecords,
+  };
 }
 
 export async function clearSessions() {

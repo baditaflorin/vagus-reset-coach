@@ -8,8 +8,9 @@ import {
   type BreathSettings,
   type BreathState,
 } from "./features/breath/breath";
+import { evaluateSignalDiagnostics } from "./features/rppg/diagnostics";
 import { PulseEstimator } from "./features/rppg/rppg";
-import type { PulseMetrics } from "./features/rppg/types";
+import type { PulseMetrics, SignalDiagnostics } from "./features/rppg/types";
 import {
   defaultFaceRoi,
   VideoFrameSampler,
@@ -21,7 +22,7 @@ import {
 } from "./features/sessions/analytics";
 import {
   clearSessions,
-  getSessions,
+  getSessionLoadReport,
   saveSession,
 } from "./features/sessions/storage";
 import type {
@@ -44,6 +45,11 @@ const EMPTY_METRICS: PulseMetrics = {
   intervalsMs: [],
   status: "warming",
 };
+const EMPTY_DIAGNOSTICS: SignalDiagnostics = evaluateSignalDiagnostics({
+  cameraAvailable: false,
+  metrics: EMPTY_METRICS,
+  samples: [],
+});
 
 type ActiveSession = {
   startedAt: Date;
@@ -59,6 +65,7 @@ function App() {
   const estimatorRef = useRef(new PulseEstimator());
   const audioRef = useRef(new BreathAudio());
   const metricsRef = useRef<PulseMetrics>(EMPTY_METRICS);
+  const diagnosticsRef = useRef<SignalDiagnostics>(EMPTY_DIAGNOSTICS);
   const sessionRef = useRef<ActiveSession | null>(null);
   const lastPhaseRef = useRef<string | null>(null);
   const settingsRef = useRef<BreathSettings>(DEFAULT_BREATH_SETTINGS);
@@ -66,6 +73,8 @@ function App() {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<PulseMetrics>(EMPTY_METRICS);
+  const [diagnostics, setDiagnostics] =
+    useState<SignalDiagnostics>(EMPTY_DIAGNOSTICS);
   const [breathSettings, setBreathSettings] = useState<BreathSettings>(
     DEFAULT_BREATH_SETTINGS,
   );
@@ -81,14 +90,17 @@ function App() {
   );
   const [lastRecord, setLastRecord] = useState<SessionRecord | null>(null);
   const [displayCommit, setDisplayCommit] = useState(__APP_COMMIT__);
+  const [skippedHistoryRecords, setSkippedHistoryRecords] = useState(0);
+  const debugEnabled = window.location.search.includes("debug=1");
 
   useEffect(() => {
     settingsRef.current = breathSettings;
   }, [breathSettings]);
 
   const refreshHistory = useCallback(async () => {
-    const records = await getSessions();
+    const { records, skippedRecords } = await getSessionLoadReport();
     setSessions(records);
+    setSkippedHistoryRecords(skippedRecords);
     setAnalytics(await summarizeSessions(records));
   }, []);
 
@@ -130,8 +142,15 @@ function App() {
     }
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError(
-        "This browser does not expose camera access. You can still use the breath pacer.",
+        "Camera access is not available in this browser. You can continue breath-only, but HRV will not be measured.",
       );
+      const nextDiagnostics = evaluateSignalDiagnostics({
+        cameraAvailable: false,
+        metrics: EMPTY_METRICS,
+        samples: [],
+      });
+      diagnosticsRef.current = nextDiagnostics;
+      setDiagnostics(nextDiagnostics);
       return false;
     }
 
@@ -159,6 +178,13 @@ function App() {
           ? error.message
           : "Camera permission was not granted.",
       );
+      const nextDiagnostics = evaluateSignalDiagnostics({
+        cameraAvailable: false,
+        metrics: EMPTY_METRICS,
+        samples: [],
+      });
+      diagnosticsRef.current = nextDiagnostics;
+      setDiagnostics(nextDiagnostics);
       return false;
     }
   }, []);
@@ -182,6 +208,8 @@ function App() {
       rmssdMs: currentMetrics.rmssdMs,
       breathsPerMinute: settingsRef.current.breathsPerMinute,
       quality: currentMetrics.quality,
+      diagnostics: diagnosticsRef.current,
+      appVersion: __APP_VERSION__,
     });
     await saveSession(record);
     setLastRecord(record);
@@ -203,10 +231,21 @@ function App() {
         const sample = sampler.sample(video, defaultFaceRoi());
         if (sample) {
           const nextMetrics = estimatorRef.current.addSample(sample);
+          const nextDiagnostics = evaluateSignalDiagnostics({
+            cameraAvailable: true,
+            metrics: nextMetrics,
+            samples: estimatorRef.current.getSamples(),
+          });
           metricsRef.current = nextMetrics;
+          diagnosticsRef.current = nextDiagnostics;
           setMetrics(nextMetrics);
+          setDiagnostics(nextDiagnostics);
 
-          if (sessionRef.current?.running && sample.timeMs % 4_000 < 120) {
+          if (
+            sessionRef.current?.running &&
+            nextDiagnostics.ready &&
+            sample.timeMs % 4_000 < 120
+          ) {
             const recommended = recommendBreathSettings(nextMetrics);
             if (
               Math.abs(
@@ -256,7 +295,7 @@ function App() {
     sessionRef.current = {
       startedAt: new Date(),
       startedAtMs: now,
-      baselineBpm: metricsRef.current.bpm,
+      baselineBpm: diagnosticsRef.current.ready ? metricsRef.current.bpm : null,
       running: true,
     };
     setLastRecord(null);
@@ -293,7 +332,14 @@ function App() {
   }, [refreshHistory, sessions.length]);
 
   const exportHistory = useCallback(() => {
-    const blob = new Blob([JSON.stringify(sessions, null, 2)], {
+    const payload = {
+      schemaVersion: 1,
+      appVersion: __APP_VERSION__,
+      exportedAt: new Date().toISOString(),
+      source: "vagus-reset-coach",
+      records: sessions,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
@@ -305,15 +351,17 @@ function App() {
   }, [sessions]);
 
   const remainingLabel = formatTime((SESSION_MS - elapsedMs) / 1_000);
-  const signalLabel = useMemo(() => {
-    if (metrics.status === "ready") {
-      return "rPPG ready";
-    }
-    if (metrics.status === "low-quality") {
-      return "improve light";
-    }
-    return "warming signal";
-  }, [metrics.status]);
+  const signalLabel = diagnostics.primaryMessage;
+  const debugSnapshot = useMemo(
+    () => ({
+      cameraActive,
+      running,
+      metrics,
+      diagnostics,
+      skippedHistoryRecords,
+    }),
+    [cameraActive, diagnostics, metrics, running, skippedHistoryRecords],
+  );
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -364,7 +412,7 @@ function App() {
             <div className="mt-5 grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
               <CameraPanel
                 videoRef={videoRef}
-                metrics={metrics}
+                diagnostics={diagnostics}
                 cameraActive={cameraActive}
                 running={running}
                 audioEnabled={audioEnabled}
@@ -399,7 +447,7 @@ function App() {
             <MetricTile
               label="Signal"
               value={`${Math.round(metrics.quality * 100)}%`}
-              detail="Light, stillness, and cadence confidence"
+              detail={`Measurement confidence ${Math.round(diagnostics.confidence * 100)}%`}
               tone="amber"
             />
             <MetricTile
@@ -420,7 +468,8 @@ function App() {
               </h2>
               <p className="mt-2 text-sm leading-6 text-teal-950/75">
                 Ending HR {lastRecord.endingBpm ?? "n/a"} bpm · RMSSD{" "}
-                {lastRecord.rmssdMs ?? "n/a"} ms · local record saved.
+                {lastRecord.rmssdMs ?? "n/a"} ms · {lastRecord.confidenceLabel}{" "}
+                confidence local record saved.
               </p>
             </section>
           )}
@@ -431,6 +480,28 @@ function App() {
             onClear={clearHistory}
             onExport={exportHistory}
           />
+          {skippedHistoryRecords > 0 && (
+            <section className="panel border-amber/40 bg-amber-50">
+              <p className="eyebrow">History recovery</p>
+              <h2 className="section-title">
+                {skippedHistoryRecords} invalid local record
+                {skippedHistoryRecords === 1 ? "" : "s"} skipped
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-amber-950/75">
+                Your valid sessions were preserved. Export history before
+                clearing data if you want to inspect the raw browser records.
+              </p>
+            </section>
+          )}
+
+          {debugEnabled && (
+            <section className="panel">
+              <p className="eyebrow">Debug</p>
+              <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-stone-950 p-3 text-xs leading-5 text-stone-50">
+                {JSON.stringify(debugSnapshot, null, 2)}
+              </pre>
+            </section>
+          )}
 
           <section className="panel">
             <p className="eyebrow">Build</p>

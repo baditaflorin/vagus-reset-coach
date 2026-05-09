@@ -6,6 +6,7 @@ const SAMPLE_HEIGHT = 72;
 export class VideoFrameSampler {
   private readonly canvas = document.createElement("canvas");
   private readonly context: CanvasRenderingContext2D;
+  private previousBrightness: number | null = null;
 
   constructor() {
     const context = this.canvas.getContext("2d", { willReadFrequently: true });
@@ -47,25 +48,60 @@ export class VideoFrameSampler {
     let red = 0;
     let green = 0;
     let blue = 0;
+    let luma = 0;
+    let lumaSquared = 0;
+    let glareCount = 0;
+    let darkCount = 0;
+    let skinCount = 0;
     let count = 0;
 
     for (let index = 0; index < pixels.length; index += 4) {
-      red += pixels[index];
-      green += pixels[index + 1];
-      blue += pixels[index + 2];
+      const pixelRed = pixels[index];
+      const pixelGreen = pixels[index + 1];
+      const pixelBlue = pixels[index + 2];
+      const pixelLuma =
+        pixelRed * 0.299 + pixelGreen * 0.587 + pixelBlue * 0.114;
+      red += pixelRed;
+      green += pixelGreen;
+      blue += pixelBlue;
+      luma += pixelLuma;
+      lumaSquared += pixelLuma * pixelLuma;
+      if (pixelLuma > 235) {
+        glareCount += 1;
+      }
+      if (pixelLuma < 35) {
+        darkCount += 1;
+      }
+      if (isLikelySkinPixel(pixelRed, pixelGreen, pixelBlue, pixelLuma)) {
+        skinCount += 1;
+      }
       count += 1;
     }
 
     red /= count;
     green /= count;
     blue /= count;
+    luma /= count;
+    const brightnessStdDev = Math.sqrt(
+      Math.max(0, lumaSquared / count - luma * luma),
+    );
+    const previousBrightness = this.previousBrightness;
+    this.previousBrightness = luma;
 
     return {
       timeMs,
       red,
       green,
       blue,
-      brightness: (red + green + blue) / 3,
+      brightness: luma,
+      brightnessStdDev,
+      glareRatio: glareCount / count,
+      darkRatio: darkCount / count,
+      skinRatio: skinCount / count,
+      motionScore:
+        previousBrightness === null
+          ? 0
+          : Math.min(1, Math.abs(luma - previousBrightness) / 42),
     };
   }
 }
@@ -77,4 +113,22 @@ export function defaultFaceRoi(): RegionOfInterest {
     width: 0.42,
     height: 0.34,
   };
+}
+
+function isLikelySkinPixel(
+  red: number,
+  green: number,
+  blue: number,
+  luma: number,
+) {
+  return (
+    luma > 42 &&
+    luma < 230 &&
+    red > 55 &&
+    green > 35 &&
+    blue > 25 &&
+    red >= blue &&
+    red - green > -12 &&
+    Math.max(red, green, blue) - Math.min(red, green, blue) > 12
+  );
 }
