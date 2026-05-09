@@ -20,6 +20,7 @@ import {
   summarizeInMemory,
   summarizeSessions,
 } from "./features/sessions/analytics";
+import { deriveCoachState } from "./features/session/state";
 import {
   clearSessions,
   getSessionLoadReport,
@@ -91,6 +92,11 @@ function App() {
   const [lastRecord, setLastRecord] = useState<SessionRecord | null>(null);
   const [displayCommit, setDisplayCommit] = useState(__APP_COMMIT__);
   const [skippedHistoryRecords, setSkippedHistoryRecords] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [recoverableError, setRecoverableError] = useState<string | null>(null);
+  const [pendingRecord, setPendingRecord] = useState<SessionRecord | null>(
+    null,
+  );
   const debugEnabled = window.location.search.includes("debug=1");
 
   useEffect(() => {
@@ -211,9 +217,21 @@ function App() {
       diagnostics: diagnosticsRef.current,
       appVersion: __APP_VERSION__,
     });
-    await saveSession(record);
-    setLastRecord(record);
-    await refreshHistory();
+    setSaving(true);
+    setRecoverableError(null);
+    try {
+      await saveSession(record);
+      setPendingRecord(null);
+      setLastRecord(record);
+      await refreshHistory();
+    } catch {
+      setPendingRecord(record);
+      setRecoverableError(
+        "Local storage could not save this reset. Your summary is still in memory; retry or export existing history before clearing browser data.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }, [refreshHistory]);
 
   useEffect(() => {
@@ -290,6 +308,9 @@ function App() {
   }, []);
 
   const beginSession = useCallback(async () => {
+    if (sessionRef.current?.running) {
+      return;
+    }
     await startCamera();
     const now = performance.now();
     sessionRef.current = {
@@ -299,6 +320,7 @@ function App() {
       running: true,
     };
     setLastRecord(null);
+    setRecoverableError(null);
     setElapsedMs(0);
     setRunning(true);
     lastPhaseRef.current = null;
@@ -331,6 +353,26 @@ function App() {
     await refreshHistory();
   }, [refreshHistory, sessions.length]);
 
+  const retryPendingSave = useCallback(async () => {
+    if (!pendingRecord) {
+      return;
+    }
+    setSaving(true);
+    setRecoverableError(null);
+    try {
+      await saveSession(pendingRecord);
+      setLastRecord(pendingRecord);
+      setPendingRecord(null);
+      await refreshHistory();
+    } catch {
+      setRecoverableError(
+        "Local storage still could not save this reset. Export history, free browser storage, and retry.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }, [pendingRecord, refreshHistory]);
+
   const exportHistory = useCallback(() => {
     const payload = {
       schemaVersion: 1,
@@ -352,15 +394,35 @@ function App() {
 
   const remainingLabel = formatTime((SESSION_MS - elapsedMs) / 1_000);
   const signalLabel = diagnostics.primaryMessage;
+  const coachState = useMemo(
+    () =>
+      deriveCoachState({
+        cameraActive,
+        running,
+        saving,
+        saved: lastRecord !== null && !running,
+        recoverableError,
+        diagnostics,
+      }),
+    [cameraActive, diagnostics, lastRecord, recoverableError, running, saving],
+  );
   const debugSnapshot = useMemo(
     () => ({
       cameraActive,
       running,
       metrics,
       diagnostics,
+      coachState,
       skippedHistoryRecords,
     }),
-    [cameraActive, diagnostics, metrics, running, skippedHistoryRecords],
+    [
+      cameraActive,
+      coachState,
+      diagnostics,
+      metrics,
+      running,
+      skippedHistoryRecords,
+    ],
   );
 
   return (
@@ -413,6 +475,7 @@ function App() {
               <CameraPanel
                 videoRef={videoRef}
                 diagnostics={diagnostics}
+                stateLabel={coachState.label}
                 cameraActive={cameraActive}
                 running={running}
                 audioEnabled={audioEnabled}
@@ -471,6 +534,22 @@ function App() {
                 {lastRecord.rmssdMs ?? "n/a"} ms · {lastRecord.confidenceLabel}{" "}
                 confidence local record saved.
               </p>
+            </section>
+          )}
+          {recoverableError && (
+            <section className="panel border-coral/40 bg-orange-50">
+              <p className="eyebrow">Recoverable issue</p>
+              <h2 className="section-title">Session not saved yet</h2>
+              <p className="mt-2 text-sm leading-6 text-orange-950/75">
+                {recoverableError}
+              </p>
+              <button
+                className="control-button mt-4"
+                type="button"
+                onClick={() => void retryPendingSave()}
+              >
+                Retry save
+              </button>
             </section>
           )}
 

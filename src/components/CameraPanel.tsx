@@ -5,6 +5,7 @@ import type { SignalDiagnostics } from "../features/rppg/types";
 type CameraPanelProps = {
   videoRef: RefObject<HTMLVideoElement | null>;
   diagnostics: SignalDiagnostics;
+  stateLabel: string;
   cameraActive: boolean;
   running: boolean;
   audioEnabled: boolean;
@@ -18,6 +19,7 @@ type CameraPanelProps = {
 export function CameraPanel({
   videoRef,
   diagnostics,
+  stateLabel,
   cameraActive,
   running,
   audioEnabled,
@@ -39,7 +41,7 @@ export function CameraPanel({
         <span className={`status-pill ${cameraActive ? "status-pill-on" : ""}`}>
           {cameraActive
             ? `${quality}% ${diagnostics.confidenceLabel}`
-            : "camera off"}
+            : stateLabel}
         </span>
       </div>
 
