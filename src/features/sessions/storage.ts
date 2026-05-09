@@ -57,6 +57,21 @@ export async function clearSessions() {
   db.close();
 }
 
+export async function replaceSessions(records: SessionRecord[]) {
+  const parsedRecords = records.map((record) =>
+    sessionRecordSchema.parse(record),
+  );
+  const db = await openDatabase();
+  const transaction = db.transaction(STORE_NAME, "readwrite");
+  const store = transaction.objectStore(STORE_NAME);
+  await requestToPromise(store.clear());
+  for (const record of parsedRecords) {
+    await requestToPromise(store.put(record));
+  }
+  await transactionToPromise(transaction);
+  db.close();
+}
+
 function openDatabase() {
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -80,5 +95,13 @@ function requestToPromise<T>(request: IDBRequest<T>) {
     request.onerror = () =>
       reject(request.error ?? new Error("IndexedDB request failed"));
     request.onsuccess = () => resolve(request.result);
+  });
+}
+
+function transactionToPromise(transaction: IDBTransaction) {
+  return new Promise<void>((resolve, reject) => {
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("IndexedDB transaction failed"));
+    transaction.oncomplete = () => resolve();
   });
 }

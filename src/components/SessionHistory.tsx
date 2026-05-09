@@ -1,4 +1,5 @@
-import { Download, Trash2 } from "lucide-react";
+import { Copy, Download, Printer, Trash2, Upload } from "lucide-react";
+import { useId, useState, type ChangeEvent, type DragEvent } from "react";
 import type {
   AnalyticsSummary,
   SessionRecord,
@@ -8,21 +9,58 @@ import { formatDateTime } from "../lib/format";
 type SessionHistoryProps = {
   sessions: SessionRecord[];
   analytics: AnalyticsSummary;
+  importStatus: string | null;
   onClear: () => void;
+  onCopySummary: () => void;
   onExport: () => void;
+  onImportFile: (file: File) => void;
+  onImportText: (text: string) => void;
+  onPrintSummary: () => void;
 };
 
 export function SessionHistory({
   sessions,
   analytics,
+  importStatus,
   onClear,
+  onCopySummary,
   onExport,
+  onImportFile,
+  onImportText,
+  onPrintSummary,
 }: SessionHistoryProps) {
+  const inputId = useId();
+  const [importText, setImportText] = useState("");
+  const [dragActive, setDragActive] = useState(false);
   const points = sessions
     .slice()
     .reverse()
     .slice(-14)
     .map((session) => session.coherenceScore);
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    if (file) {
+      onImportFile(file);
+    }
+    event.currentTarget.value = "";
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragActive(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) {
+      onImportFile(file);
+      return;
+    }
+
+    const text = event.dataTransfer.getData("text/plain").trim();
+    if (text) {
+      setImportText(text);
+      onImportText(text);
+    }
+  };
 
   return (
     <section className="panel">
@@ -31,22 +69,41 @@ export function SessionHistory({
           <p className="eyebrow">Progression</p>
           <h2 className="section-title">Local session log</h2>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
-            className="icon-button"
+            className="control-button"
             type="button"
-            onClick={onExport}
-            aria-label="Export sessions"
+            onClick={onCopySummary}
           >
-            <Download size={18} />
+            <Copy size={18} />
+            Copy
           </button>
           <button
-            className="icon-button"
+            className="control-button"
             type="button"
-            onClick={onClear}
-            aria-label="Clear sessions"
+            onClick={onPrintSummary}
           >
+            <Printer size={18} />
+            Print
+          </button>
+          <button className="control-button" type="button" onClick={onExport}>
+            <Download size={18} />
+            Export
+          </button>
+          <label className="control-button cursor-pointer">
+            <Upload size={18} />
+            Import
+            <input
+              accept="application/json"
+              className="sr-only"
+              id={inputId}
+              type="file"
+              onChange={handleFileChange}
+            />
+          </label>
+          <button className="control-button" type="button" onClick={onClear}>
             <Trash2 size={18} />
+            Clear
           </button>
         </div>
       </div>
@@ -65,6 +122,70 @@ export function SessionHistory({
       </div>
 
       <Sparkline points={points} />
+
+      <div
+        className={`mt-4 rounded-lg border border-dashed p-4 ${
+          dragActive
+            ? "border-teal-700 bg-teal-50"
+            : "border-stone-300 bg-white/70"
+        }`}
+        onDragEnter={() => setDragActive(true)}
+        onDragLeave={() => setDragActive(false)}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={handleDrop}
+      >
+        <p className="text-sm font-semibold text-stone-950">
+          Restore exported state
+        </p>
+        <p className="mt-1 text-sm leading-6 text-stone-600">
+          Drop a `vagus-reset-state.json` file here or paste exported JSON.
+        </p>
+        <textarea
+          className="mt-3 min-h-28 w-full rounded-lg border border-stone-200 bg-white p-3 text-sm text-stone-700"
+          placeholder="Paste exported JSON here"
+          value={importText}
+          onChange={(event) => setImportText(event.currentTarget.value)}
+        />
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            className="control-button"
+            type="button"
+            onClick={() => {
+              if (importText.trim()) {
+                onImportText(importText.trim());
+              }
+            }}
+          >
+            <Upload size={18} />
+            Import pasted JSON
+          </button>
+          <button
+            className="control-button"
+            type="button"
+            onClick={async () => {
+              try {
+                const text = await navigator.clipboard.readText();
+                setImportText(text);
+                if (text.trim()) {
+                  onImportText(text.trim());
+                }
+              } catch {
+                setImportText(
+                  "Clipboard access was blocked. Paste the exported JSON into the box above instead.",
+                );
+              }
+            }}
+          >
+            <Copy size={18} />
+            Read clipboard
+          </button>
+        </div>
+        {importStatus && (
+          <p className="mt-3 text-sm leading-6 text-stone-600">
+            {importStatus}
+          </p>
+        )}
+      </div>
 
       <div className="mt-4 space-y-3">
         {sessions.length === 0 ? (

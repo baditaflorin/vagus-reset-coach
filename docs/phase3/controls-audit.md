@@ -6,19 +6,23 @@ Scope: current Phase 2.1 app before Phase 3 completeness implementation.
 
 ## Status Grid
 
-| Control           | Status          | Notes                                                                                                            |
-| ----------------- | --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `Camera`          | Works fully     | Starts the local webcam preview. Idempotent after the stream exists.                                             |
-| `Start`           | Works partially | Starts the timer and breath coach, but also silently creates breath-only runs when camera access is unavailable. |
-| `Stop`            | Works fully     | Stops the in-progress reset.                                                                                     |
-| `Audio`           | Works partially | Toggles cues in-memory only; the preference is lost on refresh.                                                  |
-| `Export sessions` | Works partially | Downloads JSON, but the user cannot load it back into the app.                                                   |
-| `Clear sessions`  | Works fully     | Clears IndexedDB session records after confirmation.                                                             |
-| `Retry save`      | Works fully     | Retries saving a pending record after a recoverable storage failure.                                             |
-| `GitHub`          | Works fully     | Opens the repository.                                                                                            |
-| `PayPal`          | Works fully     | Opens support link.                                                                                              |
+| Control                | Status      | Notes                                                                                    |
+| ---------------------- | ----------- | ---------------------------------------------------------------------------------------- |
+| `Camera`               | Works fully | Starts the local webcam preview. Idempotent after the stream exists.                     |
+| `Start`                | Works fully | Starts the reset and makes breath-only fallback explicit when camera HRV is unavailable. |
+| `Stop`                 | Works fully | Stops the in-progress reset.                                                             |
+| `Audio`                | Works fully | Toggles cues and persists the preference locally.                                        |
+| `Export`               | Works fully | Downloads the versioned app-state JSON contract.                                         |
+| `Import`               | Works fully | Restores state from exported JSON by file picker, drop, paste, or clipboard read.        |
+| `Copy`                 | Works fully | Copies a compact local summary to the clipboard.                                         |
+| `Print`                | Works fully | Opens a print-friendly summary window.                                                   |
+| `Clear`                | Works fully | Clears IndexedDB session records after confirmation.                                     |
+| `Reset settings`       | Works fully | Restores local preferences to defaults.                                                  |
+| `Clear all local data` | Works fully | Clears settings, history, and interrupted-session markers after confirmation.            |
+| `Retry save`           | Works fully | Retries saving a pending record after a recoverable storage failure.                     |
+| `GitHub`               | Works fully | Opens the repository.                                                                    |
+| `PayPal`               | Works fully | Opens support link.                                                                      |
 
 ## Notes
 
-- There is no dedicated settings surface today, so the only mutable preference is the transient audio toggle.
-- The export button over-promises a complete ownership story because import does not exist yet.
+- The remaining control risk is browser permission variance, not missing handlers.

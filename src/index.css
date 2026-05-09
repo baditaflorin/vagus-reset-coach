@@ -328,6 +328,36 @@ a:focus-visible {
   font-size: 1.2rem;
 }
 
+.settings-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(25, 23, 20, 0.1);
+  background: white;
+  padding: 0.85rem;
+}
+
+.settings-row strong,
+.settings-row small {
+  display: block;
+}
+
+.settings-row small {
+  margin-top: 0.2rem;
+  color: #6b655d;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.settings-row input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.1rem;
+  accent-color: #0f766e;
+}
+
 .sparkline-empty {
   height: 6rem;
   margin-top: 1rem;

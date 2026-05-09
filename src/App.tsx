@@ -1,5 +1,6 @@
 import { HeartHandshake, ShieldCheck, Star } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { BreathAudio } from "./features/breath/audio";
 import {
   DEFAULT_BREATH_SETTINGS,
@@ -8,6 +9,28 @@ import {
   type BreathSettings,
   type BreathState,
 } from "./features/breath/breath";
+import {
+  buildClipboardSummary,
+  buildPrintableSummaryHtml,
+  downloadTextFile,
+  parseAppStateJson,
+  readAppStateFile,
+  serializeAppState,
+} from "./features/app-state/files";
+import {
+  buildUnavailableDiagnostics,
+  loadVisibleCommit,
+} from "./features/app-state/browser";
+import {
+  clearAppSettings,
+  clearInterruptedSession,
+  getDefaultAppSettings,
+  loadAppSettings,
+  markInterruptedSession,
+  readInterruptedSession,
+  saveAppSettings,
+} from "./features/app-state/settings";
+import type { AppSettings } from "./features/app-state/types";
 import { evaluateSignalDiagnostics } from "./features/rppg/diagnostics";
 import { PulseEstimator } from "./features/rppg/rppg";
 import type { PulseMetrics, SignalDiagnostics } from "./features/rppg/types";
@@ -24,6 +47,7 @@ import { deriveCoachState } from "./features/session/state";
 import {
   clearSessions,
   getSessionLoadReport,
+  replaceSessions,
   saveSession,
 } from "./features/sessions/storage";
 import type {
@@ -46,11 +70,8 @@ const EMPTY_METRICS: PulseMetrics = {
   intervalsMs: [],
   status: "warming",
 };
-const EMPTY_DIAGNOSTICS: SignalDiagnostics = evaluateSignalDiagnostics({
-  cameraAvailable: false,
-  metrics: EMPTY_METRICS,
-  samples: [],
-});
+const EMPTY_DIAGNOSTICS: SignalDiagnostics =
+  buildUnavailableDiagnostics(EMPTY_METRICS);
 
 type ActiveSession = {
   startedAt: Date;
@@ -58,6 +79,20 @@ type ActiveSession = {
   baselineBpm: number | null;
   running: boolean;
 };
+
+function manualBreathSettings(rate: number): BreathSettings {
+  const cycleSec = 60 / rate;
+  const exhaleSec = Math.min(6.8, Math.max(5.2, cycleSec * 0.58));
+  const inhaleSec = Math.max(3.6, cycleSec - exhaleSec);
+
+  return {
+    breathsPerMinute: rate,
+    inhaleSec: Math.round(inhaleSec * 10) / 10,
+    holdTopSec: 0,
+    exhaleSec: Math.round(exhaleSec * 10) / 10,
+    holdBottomSec: 0,
+  };
+}
 
 function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -70,21 +105,27 @@ function App() {
   const sessionRef = useRef<ActiveSession | null>(null);
   const lastPhaseRef = useRef<string | null>(null);
   const settingsRef = useRef<BreathSettings>(DEFAULT_BREATH_SETTINGS);
+  const appSettingsRef = useRef<AppSettings>(getDefaultAppSettings());
 
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<PulseMetrics>(EMPTY_METRICS);
   const [diagnostics, setDiagnostics] =
     useState<SignalDiagnostics>(EMPTY_DIAGNOSTICS);
-  const [breathSettings, setBreathSettings] = useState<BreathSettings>(
-    DEFAULT_BREATH_SETTINGS,
+  const [appSettings, setAppSettings] = useState<AppSettings>(() =>
+    loadAppSettings(),
   );
+  const [breathSettings, setBreathSettings] = useState<BreathSettings>(() => {
+    const settings = loadAppSettings();
+    return settings.adaptiveBreath
+      ? DEFAULT_BREATH_SETTINGS
+      : manualBreathSettings(settings.manualBreathsPerMinute);
+  });
   const [breathState, setBreathState] = useState<BreathState>(() =>
     getBreathState(0, DEFAULT_BREATH_SETTINGS),
   );
   const [running, setRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [audioEnabled, setAudioEnabled] = useState(true);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsSummary>(() =>
     summarizeInMemory([]),
@@ -97,11 +138,28 @@ function App() {
   const [pendingRecord, setPendingRecord] = useState<SessionRecord | null>(
     null,
   );
+  const [ownershipNotice, setOwnershipNotice] = useState<string | null>(null);
+  const [interruptedNotice, setInterruptedNotice] = useState<string | null>(
+    () => {
+      const interruptedAt = readInterruptedSession();
+      if (interruptedAt) {
+        clearInterruptedSession();
+        return `A previous reset ended before it could finish on ${interruptedAt}. Your saved history is still available below.`;
+      }
+      return null;
+    },
+  );
   const debugEnabled = window.location.search.includes("debug=1");
 
   useEffect(() => {
     settingsRef.current = breathSettings;
   }, [breathSettings]);
+
+  useEffect(() => {
+    appSettingsRef.current = appSettings;
+    saveAppSettings(appSettings);
+    audioRef.current.setEnabled(appSettings.audioEnabled);
+  }, [appSettings]);
 
   const refreshHistory = useCallback(async () => {
     const { records, skippedRecords } = await getSessionLoadReport();
@@ -118,22 +176,9 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     const loadCommit = async () => {
-      if (!window.location.hostname.endsWith("github.io")) {
-        return;
-      }
-      try {
-        const response = await fetch(
-          "https://api.github.com/repos/baditaflorin/vagus-reset-coach/commits/main",
-        );
-        if (!response.ok) {
-          return;
-        }
-        const body = (await response.json()) as { sha?: string };
-        if (!cancelled && body.sha) {
-          setDisplayCommit(body.sha.slice(0, 7));
-        }
-      } catch {
-        // The local fallback keeps offline and rate-limited sessions usable.
+      const nextCommit = await loadVisibleCommit(__APP_COMMIT__);
+      if (!cancelled) {
+        setDisplayCommit(nextCommit);
       }
     };
     void loadCommit();
@@ -150,11 +195,7 @@ function App() {
       setCameraError(
         "Camera access is not available in this browser. You can continue breath-only, but HRV will not be measured.",
       );
-      const nextDiagnostics = evaluateSignalDiagnostics({
-        cameraAvailable: false,
-        metrics: EMPTY_METRICS,
-        samples: [],
-      });
+      const nextDiagnostics = buildUnavailableDiagnostics(EMPTY_METRICS);
       diagnosticsRef.current = nextDiagnostics;
       setDiagnostics(nextDiagnostics);
       return false;
@@ -184,11 +225,7 @@ function App() {
           ? error.message
           : "Camera permission was not granted.",
       );
-      const nextDiagnostics = evaluateSignalDiagnostics({
-        cameraAvailable: false,
-        metrics: EMPTY_METRICS,
-        samples: [],
-      });
+      const nextDiagnostics = buildUnavailableDiagnostics(EMPTY_METRICS);
       diagnosticsRef.current = nextDiagnostics;
       setDiagnostics(nextDiagnostics);
       return false;
@@ -219,6 +256,7 @@ function App() {
     });
     setSaving(true);
     setRecoverableError(null);
+    clearInterruptedSession();
     try {
       await saveSession(record);
       setPendingRecord(null);
@@ -260,6 +298,7 @@ function App() {
           setDiagnostics(nextDiagnostics);
 
           if (
+            appSettingsRef.current.adaptiveBreath &&
             sessionRef.current?.running &&
             nextDiagnostics.ready &&
             sample.timeMs % 4_000 < 120
@@ -312,13 +351,24 @@ function App() {
       return;
     }
     await startCamera();
+    if (!appSettingsRef.current.adaptiveBreath) {
+      const manualSettings = manualBreathSettings(
+        appSettingsRef.current.manualBreathsPerMinute,
+      );
+      settingsRef.current = manualSettings;
+      setBreathSettings(manualSettings);
+    }
     const now = performance.now();
+    const startedAt = new Date();
     sessionRef.current = {
-      startedAt: new Date(),
+      startedAt,
       startedAtMs: now,
       baselineBpm: diagnosticsRef.current.ready ? metricsRef.current.bpm : null,
       running: true,
     };
+    markInterruptedSession(startedAt.toISOString());
+    setOwnershipNotice(null);
+    setInterruptedNotice(null);
     setLastRecord(null);
     setRecoverableError(null);
     setElapsedMs(0);
@@ -332,14 +382,16 @@ function App() {
       sessionRef.current.running = false;
       sessionRef.current = null;
     }
+    clearInterruptedSession();
     setRunning(false);
   }, []);
 
   const toggleAudio = useCallback(() => {
-    const next = !audioEnabled;
-    setAudioEnabled(next);
-    audioRef.current.setEnabled(next);
-  }, [audioEnabled]);
+    setAppSettings((current) => ({
+      ...current,
+      audioEnabled: !current.audioEnabled,
+    }));
+  }, []);
 
   const clearHistory = useCallback(async () => {
     if (
@@ -350,8 +402,44 @@ function App() {
     }
     await clearSessions();
     setLastRecord(null);
+    setOwnershipNotice("Local session history cleared.");
     await refreshHistory();
   }, [refreshHistory, sessions.length]);
+
+  const resetSettings = useCallback(() => {
+    const defaults = getDefaultAppSettings();
+    clearAppSettings();
+    setAppSettings(defaults);
+    settingsRef.current = defaults.adaptiveBreath
+      ? DEFAULT_BREATH_SETTINGS
+      : manualBreathSettings(defaults.manualBreathsPerMinute);
+    setBreathSettings(settingsRef.current);
+    setOwnershipNotice("Settings restored to the local defaults.");
+  }, []);
+
+  const factoryReset = useCallback(async () => {
+    if (
+      !window.confirm(
+        "Clear all local sessions, reset settings, and remove interrupted-session markers?",
+      )
+    ) {
+      return;
+    }
+
+    await clearSessions();
+    clearAppSettings();
+    clearInterruptedSession();
+    const defaults = getDefaultAppSettings();
+    setAppSettings(defaults);
+    setBreathSettings(DEFAULT_BREATH_SETTINGS);
+    settingsRef.current = DEFAULT_BREATH_SETTINGS;
+    setLastRecord(null);
+    setPendingRecord(null);
+    setRecoverableError(null);
+    setInterruptedNotice(null);
+    setOwnershipNotice("All local app data cleared from this browser.");
+    await refreshHistory();
+  }, [refreshHistory]);
 
   const retryPendingSave = useCallback(async () => {
     if (!pendingRecord) {
@@ -363,6 +451,7 @@ function App() {
       await saveSession(pendingRecord);
       setLastRecord(pendingRecord);
       setPendingRecord(null);
+      clearInterruptedSession();
       await refreshHistory();
     } catch {
       setRecoverableError(
@@ -374,23 +463,134 @@ function App() {
   }, [pendingRecord, refreshHistory]);
 
   const exportHistory = useCallback(() => {
-    const payload = {
-      schemaVersion: 1,
-      appVersion: __APP_VERSION__,
-      exportedAt: new Date().toISOString(),
-      source: "vagus-reset-coach",
-      records: sessions,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "vagus-reset-sessions.json";
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadTextFile(
+      "vagus-reset-state.json",
+      serializeAppState({
+        appVersion: __APP_VERSION__,
+        settings: appSettings,
+        sessions,
+      }),
+    );
+    setOwnershipNotice("Local app state exported as vagus-reset-state.json.");
+  }, [appSettings, sessions]);
+
+  const importAppState = useCallback(
+    async (text: string) => {
+      try {
+        const imported = parseAppStateJson(text);
+        const nextBreathSettings = imported.settings.adaptiveBreath
+          ? DEFAULT_BREATH_SETTINGS
+          : manualBreathSettings(imported.settings.manualBreathsPerMinute);
+        await replaceSessions(imported.sessions);
+        saveAppSettings(imported.settings);
+        setAppSettings(imported.settings);
+        settingsRef.current = nextBreathSettings;
+        setBreathSettings(nextBreathSettings);
+        setInterruptedNotice(null);
+        setOwnershipNotice(
+          `Imported ${imported.sessions.length} session record${imported.sessions.length === 1 ? "" : "s"} and restored local settings.`,
+        );
+        setLastRecord(imported.sessions[0] ?? null);
+        await refreshHistory();
+      } catch {
+        setOwnershipNotice(
+          "Import failed. Use a Vagus Reset Coach export JSON file or a legacy Phase 2 history export.",
+        );
+      }
+    },
+    [refreshHistory],
+  );
+
+  const importAppStateFile = useCallback(
+    async (file: File) => {
+      try {
+        const imported = await readAppStateFile(file);
+        const nextBreathSettings = imported.settings.adaptiveBreath
+          ? DEFAULT_BREATH_SETTINGS
+          : manualBreathSettings(imported.settings.manualBreathsPerMinute);
+        await replaceSessions(imported.sessions);
+        saveAppSettings(imported.settings);
+        setAppSettings(imported.settings);
+        settingsRef.current = nextBreathSettings;
+        setBreathSettings(nextBreathSettings);
+        setInterruptedNotice(null);
+        setOwnershipNotice(
+          `Imported ${imported.sessions.length} session record${imported.sessions.length === 1 ? "" : "s"} from ${file.name}.`,
+        );
+        setLastRecord(imported.sessions[0] ?? null);
+        await refreshHistory();
+      } catch {
+        setOwnershipNotice(
+          "That file could not be imported. Choose a Vagus Reset Coach JSON export and try again.",
+        );
+      }
+    },
+    [refreshHistory],
+  );
+
+  const copySummary = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(
+        buildClipboardSummary({
+          sessions,
+          lowConfidenceCount: analytics.lowConfidenceCount,
+        }),
+      );
+      setOwnershipNotice("Session summary copied to the clipboard.");
+    } catch {
+      setOwnershipNotice(
+        "Clipboard write was blocked. Use the export button if you need a portable copy.",
+      );
+    }
+  }, [analytics.lowConfidenceCount, sessions]);
+
+  const printSummary = useCallback(() => {
+    const popup = window.open("", "_blank", "noopener,noreferrer");
+    if (!popup) {
+      setOwnershipNotice(
+        "Print view was blocked by the browser. Allow popups for this page and try again.",
+      );
+      return;
+    }
+
+    popup.document.write(
+      buildPrintableSummaryHtml({
+        sessions,
+        appVersion: __APP_VERSION__,
+      }),
+    );
+    popup.document.close();
+    popup.focus();
+    popup.print();
   }, [sessions]);
+
+  const toggleAdaptiveBreath = useCallback(() => {
+    setAppSettings((current) => {
+      const adaptiveBreath = !current.adaptiveBreath;
+      const nextSettings = {
+        ...current,
+        adaptiveBreath,
+      };
+      const nextBreathSettings = adaptiveBreath
+        ? DEFAULT_BREATH_SETTINGS
+        : manualBreathSettings(current.manualBreathsPerMinute);
+      settingsRef.current = nextBreathSettings;
+      setBreathSettings(nextBreathSettings);
+      return nextSettings;
+    });
+  }, []);
+
+  const updateManualBreaths = useCallback((value: number) => {
+    setAppSettings((current) => ({
+      ...current,
+      manualBreathsPerMinute: value,
+    }));
+    if (!appSettingsRef.current.adaptiveBreath) {
+      const nextBreathSettings = manualBreathSettings(value);
+      settingsRef.current = nextBreathSettings;
+      setBreathSettings(nextBreathSettings);
+    }
+  }, []);
 
   const remainingLabel = formatTime((SESSION_MS - elapsedMs) / 1_000);
   const signalLabel = diagnostics.primaryMessage;
@@ -424,6 +624,18 @@ function App() {
       skippedHistoryRecords,
     ],
   );
+  const copyDebugSnapshot = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(debugSnapshot, null, 2),
+      );
+      setOwnershipNotice("Debug snapshot copied to the clipboard.");
+    } catch {
+      setOwnershipNotice(
+        "Clipboard write was blocked. Copy the debug panel text manually instead.",
+      );
+    }
+  }, [debugSnapshot]);
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -478,7 +690,7 @@ function App() {
                 stateLabel={coachState.label}
                 cameraActive={cameraActive}
                 running={running}
-                audioEnabled={audioEnabled}
+                audioEnabled={appSettings.audioEnabled}
                 error={cameraError}
                 onStartCamera={() => void startCamera()}
                 onStartSession={() => void beginSession()}
@@ -516,13 +728,33 @@ function App() {
             <MetricTile
               label="Pacer"
               value={`${breathSettings.breathsPerMinute.toFixed(1)}/min`}
-              detail="Adapts gently from live signal quality"
+              detail={
+                appSettings.adaptiveBreath
+                  ? "Adapts gently from live signal quality"
+                  : "Locked to your saved manual setting"
+              }
               tone="ink"
             />
           </div>
         </section>
 
         <aside className="space-y-5">
+          {ownershipNotice && (
+            <section className="panel border-teal-700/30 bg-teal-50">
+              <p className="eyebrow">Local ownership</p>
+              <p className="text-sm leading-6 text-teal-950/80">
+                {ownershipNotice}
+              </p>
+            </section>
+          )}
+          {interruptedNotice && (
+            <section className="panel border-amber/40 bg-amber-50">
+              <p className="eyebrow">Interrupted reset</p>
+              <p className="text-sm leading-6 text-amber-950/80">
+                {interruptedNotice}
+              </p>
+            </section>
+          )}
           {lastRecord && (
             <section className="panel border-teal-700/30 bg-teal-50">
               <p className="eyebrow">Last reset</p>
@@ -553,11 +785,25 @@ function App() {
             </section>
           )}
 
+          <SettingsPanel
+            settings={appSettings}
+            onToggleAudio={toggleAudio}
+            onToggleAdaptiveBreath={toggleAdaptiveBreath}
+            onManualBreathsChange={updateManualBreaths}
+            onResetSettings={resetSettings}
+            onFactoryReset={() => void factoryReset()}
+          />
+
           <SessionHistory
             sessions={sessions}
             analytics={analytics}
+            importStatus={ownershipNotice}
             onClear={clearHistory}
+            onCopySummary={() => void copySummary()}
             onExport={exportHistory}
+            onImportFile={(file) => void importAppStateFile(file)}
+            onImportText={(text) => void importAppState(text)}
+            onPrintSummary={printSummary}
           />
           {skippedHistoryRecords > 0 && (
             <section className="panel border-amber/40 bg-amber-50">
@@ -575,7 +821,19 @@ function App() {
 
           {debugEnabled && (
             <section className="panel">
-              <p className="eyebrow">Debug</p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="eyebrow">Debug</p>
+                  <h2 className="section-title">Local snapshot</h2>
+                </div>
+                <button
+                  className="control-button"
+                  type="button"
+                  onClick={() => void copyDebugSnapshot()}
+                >
+                  Copy debug
+                </button>
+              </div>
               <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-stone-950 p-3 text-xs leading-5 text-stone-50">
                 {JSON.stringify(debugSnapshot, null, 2)}
               </pre>

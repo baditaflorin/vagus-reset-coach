@@ -4,11 +4,11 @@ Date: 2026-05-09
 
 ## Top 5 Usability Gaps
 
-1. Users can export history but cannot load it back, so the app does not yet support true user-owned state.
-2. Settings are transient. Audio and pacing preferences reset after refresh.
-3. There is no dedicated settings or reset surface, so the app lacks a complete "start fresh" and "pick my defaults" story.
-4. The `Start` control works, but its breath-only fallback is not explicit enough for a first-time user.
-5. Documentation claims local storage capabilities more broadly than the current implementation provides.
+1. Documentation still claims more storage breadth than the implementation actually ships.
+2. Mobile browser variance still needs a stranger-style verification pass.
+3. `App.tsx` remains the largest coordination module even after extracting ownership boundaries.
+4. The canonical state file contract needs smoke coverage in the browser, not just unit tests.
+5. The README still needs to be rewritten as a verified checklist instead of a short overview.
 
 ## Top 5 Half-Baked Features
 
