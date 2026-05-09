@@ -22,7 +22,7 @@ test("loads the public Pages build and exposes project metadata", async ({
     "href",
     "https://www.paypal.com/paypalme/florinbadita",
   );
-  await expect(page.getByText(/Version 0\.2\.0/)).toBeVisible();
+  await expect(page.getByText(/Version 0\.2\.1/)).toBeVisible();
   await expect(page.getByText(/Commit [a-z0-9]+/)).toBeVisible();
   await expect(page.getByRole("button", { name: /Start/ })).toBeEnabled();
   expect(consoleErrors).toEqual([]);
