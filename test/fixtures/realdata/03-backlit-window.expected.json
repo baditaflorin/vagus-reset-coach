@@ -1,0 +1,6 @@
+{
+  "ready": false,
+  "minConfidence": 0,
+  "maxConfidence": 0.42,
+  "reasonCodes": ["too-dark", "glare-or-backlight"]
+}

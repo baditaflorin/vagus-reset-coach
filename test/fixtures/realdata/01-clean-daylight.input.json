@@ -1,0 +1,40 @@
+{
+  "id": "clean-daylight",
+  "description": "Daylight laptop webcam, one centered still face.",
+  "cameraAvailable": true,
+  "metrics": {
+    "bpm": 72,
+    "rmssdMs": 38,
+    "quality": 0.84,
+    "sampleCount": 360,
+    "peakCount": 24,
+    "intervalsMs": [830, 835, 825, 832],
+    "status": "ready"
+  },
+  "samples": [
+    {
+      "timeMs": 0,
+      "red": 114,
+      "green": 98,
+      "blue": 84,
+      "brightness": 98,
+      "brightnessStdDev": 28,
+      "glareRatio": 0.01,
+      "darkRatio": 0.01,
+      "skinRatio": 0.78,
+      "motionScore": 0.03
+    },
+    {
+      "timeMs": 90,
+      "red": 113,
+      "green": 101,
+      "blue": 84,
+      "brightness": 99,
+      "brightnessStdDev": 29,
+      "glareRatio": 0.01,
+      "darkRatio": 0.01,
+      "skinRatio": 0.79,
+      "motionScore": 0.03
+    }
+  ]
+}

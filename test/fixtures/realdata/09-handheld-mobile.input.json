@@ -1,0 +1,40 @@
+{
+  "id": "handheld-mobile",
+  "description": "Phone held in hand during session; motion corrupts ROI.",
+  "cameraAvailable": true,
+  "metrics": {
+    "bpm": 88,
+    "rmssdMs": 16,
+    "quality": 0.33,
+    "sampleCount": 340,
+    "peakCount": 11,
+    "intervalsMs": [600, 890, 540, 1120],
+    "status": "low-quality"
+  },
+  "samples": [
+    {
+      "timeMs": 0,
+      "red": 102,
+      "green": 92,
+      "blue": 82,
+      "brightness": 92,
+      "brightnessStdDev": 31,
+      "glareRatio": 0.02,
+      "darkRatio": 0.04,
+      "skinRatio": 0.61,
+      "motionScore": 0.35
+    },
+    {
+      "timeMs": 90,
+      "red": 119,
+      "green": 101,
+      "blue": 89,
+      "brightness": 103,
+      "brightnessStdDev": 36,
+      "glareRatio": 0.03,
+      "darkRatio": 0.03,
+      "skinRatio": 0.59,
+      "motionScore": 0.38
+    }
+  ]
+}

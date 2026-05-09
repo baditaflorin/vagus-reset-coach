@@ -1,0 +1,40 @@
+{
+  "id": "face-drift",
+  "description": "User slouches and the fixed ROI samples hair/background.",
+  "cameraAvailable": true,
+  "metrics": {
+    "bpm": null,
+    "rmssdMs": null,
+    "quality": 0.3,
+    "sampleCount": 360,
+    "peakCount": 1,
+    "intervalsMs": [],
+    "status": "low-quality"
+  },
+  "samples": [
+    {
+      "timeMs": 0,
+      "red": 72,
+      "green": 76,
+      "blue": 80,
+      "brightness": 76,
+      "brightnessStdDev": 8,
+      "glareRatio": 0.01,
+      "darkRatio": 0.05,
+      "skinRatio": 0.09,
+      "motionScore": 0.18
+    },
+    {
+      "timeMs": 90,
+      "red": 70,
+      "green": 75,
+      "blue": 81,
+      "brightness": 75,
+      "brightnessStdDev": 9,
+      "glareRatio": 0.01,
+      "darkRatio": 0.06,
+      "skinRatio": 0.08,
+      "motionScore": 0.2
+    }
+  ]
+}

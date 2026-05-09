@@ -1,0 +1,6 @@
+{
+  "ready": false,
+  "minConfidence": 0,
+  "maxConfidence": 0.55,
+  "reasonCodes": ["subject-not-locked", "pulse-irregular"]
+}

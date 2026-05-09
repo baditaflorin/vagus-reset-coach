@@ -1,0 +1,40 @@
+{
+  "id": "glasses-reflection",
+  "description": "Glasses and screen reflection inside the face ROI.",
+  "cameraAvailable": true,
+  "metrics": {
+    "bpm": 91,
+    "rmssdMs": 9,
+    "quality": 0.36,
+    "sampleCount": 360,
+    "peakCount": 14,
+    "intervalsMs": [510, 940, 620, 1180],
+    "status": "low-quality"
+  },
+  "samples": [
+    {
+      "timeMs": 0,
+      "red": 128,
+      "green": 120,
+      "blue": 112,
+      "brightness": 120,
+      "brightnessStdDev": 54,
+      "glareRatio": 0.14,
+      "darkRatio": 0.02,
+      "skinRatio": 0.48,
+      "motionScore": 0.08
+    },
+    {
+      "timeMs": 90,
+      "red": 132,
+      "green": 124,
+      "blue": 116,
+      "brightness": 124,
+      "brightnessStdDev": 57,
+      "glareRatio": 0.16,
+      "darkRatio": 0.02,
+      "skinRatio": 0.46,
+      "motionScore": 0.08
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "no-warmup",
+  "description": "User starts immediately before a stable baseline exists.",
+  "cameraAvailable": true,
+  "metrics": {
+    "bpm": 76,
+    "rmssdMs": null,
+    "quality": 0.31,
+    "sampleCount": 44,
+    "peakCount": 3,
+    "intervalsMs": [790, 805],
+    "status": "warming"
+  },
+  "samples": [
+    {
+      "timeMs": 0,
+      "red": 112,
+      "green": 98,
+      "blue": 86,
+      "brightness": 99,
+      "brightnessStdDev": 27,
+      "glareRatio": 0.01,
+      "darkRatio": 0.01,
+      "skinRatio": 0.76,
+      "motionScore": 0.04
+    }
+  ]
+}

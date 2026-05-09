@@ -1,0 +1,40 @@
+{
+  "id": "dim-warm-room",
+  "description": "Face centered but dim warm lamp.",
+  "cameraAvailable": true,
+  "metrics": {
+    "bpm": null,
+    "rmssdMs": null,
+    "quality": 0.22,
+    "sampleCount": 320,
+    "peakCount": 2,
+    "intervalsMs": [],
+    "status": "low-quality"
+  },
+  "samples": [
+    {
+      "timeMs": 0,
+      "red": 58,
+      "green": 42,
+      "blue": 32,
+      "brightness": 44,
+      "brightnessStdDev": 10,
+      "glareRatio": 0,
+      "darkRatio": 0.34,
+      "skinRatio": 0.42,
+      "motionScore": 0.05
+    },
+    {
+      "timeMs": 90,
+      "red": 60,
+      "green": 43,
+      "blue": 32,
+      "brightness": 45,
+      "brightnessStdDev": 11,
+      "glareRatio": 0,
+      "darkRatio": 0.32,
+      "skinRatio": 0.41,
+      "motionScore": 0.05
+    }
+  ]
+}

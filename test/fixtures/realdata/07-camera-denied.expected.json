@@ -1,0 +1,6 @@
+{
+  "ready": false,
+  "minConfidence": 0,
+  "maxConfidence": 0.1,
+  "reasonCodes": ["breath-only"]
+}

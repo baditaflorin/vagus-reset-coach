@@ -1,0 +1,49 @@
+{
+  "id": "malformed-history",
+  "description": "Local history contains one good record and two malformed records.",
+  "cameraAvailable": true,
+  "metrics": {
+    "bpm": 72,
+    "rmssdMs": 35,
+    "quality": 0.7,
+    "sampleCount": 300,
+    "peakCount": 22,
+    "intervalsMs": [820, 830, 810],
+    "status": "ready"
+  },
+  "samples": [
+    {
+      "timeMs": 0,
+      "red": 112,
+      "green": 98,
+      "blue": 84,
+      "brightness": 98,
+      "brightnessStdDev": 26,
+      "glareRatio": 0.01,
+      "darkRatio": 0.01,
+      "skinRatio": 0.72,
+      "motionScore": 0.03
+    }
+  ],
+  "historyRecords": [
+    {
+      "id": "session-2026-05-08-001",
+      "schemaVersion": 1,
+      "startedAt": "2026-05-08T08:00:00.000Z",
+      "durationSec": 120,
+      "baselineBpm": 78,
+      "endingBpm": 72,
+      "rmssdMs": 35,
+      "breathsPerMinute": 6,
+      "coherenceScore": 76,
+      "quality": 0.7
+    },
+    { "id": "bad-missing-start", "schemaVersion": 1, "durationSec": 120 },
+    {
+      "id": "bad-score",
+      "schemaVersion": 1,
+      "startedAt": "2026-05-08T09:00:00.000Z",
+      "coherenceScore": 140
+    }
+  ]
+}

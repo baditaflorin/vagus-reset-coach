@@ -1,0 +1,40 @@
+{
+  "id": "multiple-faces",
+  "description": "Two people in frame; target subject is not locked.",
+  "cameraAvailable": true,
+  "metrics": {
+    "bpm": 104,
+    "rmssdMs": 12,
+    "quality": 0.41,
+    "sampleCount": 360,
+    "peakCount": 15,
+    "intervalsMs": [560, 780, 500, 900],
+    "status": "low-quality"
+  },
+  "samples": [
+    {
+      "timeMs": 0,
+      "red": 105,
+      "green": 92,
+      "blue": 82,
+      "brightness": 93,
+      "brightnessStdDev": 45,
+      "glareRatio": 0.04,
+      "darkRatio": 0.03,
+      "skinRatio": 0.88,
+      "motionScore": 0.22
+    },
+    {
+      "timeMs": 90,
+      "red": 108,
+      "green": 96,
+      "blue": 84,
+      "brightness": 96,
+      "brightnessStdDev": 48,
+      "glareRatio": 0.04,
+      "darkRatio": 0.03,
+      "skinRatio": 0.9,
+      "motionScore": 0.24
+    }
+  ]
+}

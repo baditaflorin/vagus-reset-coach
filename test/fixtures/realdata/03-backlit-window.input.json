@@ -1,0 +1,40 @@
+{
+  "id": "backlit-window",
+  "description": "Bright window behind user leaves face underexposed.",
+  "cameraAvailable": true,
+  "metrics": {
+    "bpm": null,
+    "rmssdMs": null,
+    "quality": 0.28,
+    "sampleCount": 330,
+    "peakCount": 3,
+    "intervalsMs": [],
+    "status": "low-quality"
+  },
+  "samples": [
+    {
+      "timeMs": 0,
+      "red": 46,
+      "green": 38,
+      "blue": 34,
+      "brightness": 39,
+      "brightnessStdDev": 42,
+      "glareRatio": 0.16,
+      "darkRatio": 0.28,
+      "skinRatio": 0.26,
+      "motionScore": 0.05
+    },
+    {
+      "timeMs": 90,
+      "red": 48,
+      "green": 39,
+      "blue": 34,
+      "brightness": 40,
+      "brightnessStdDev": 44,
+      "glareRatio": 0.18,
+      "darkRatio": 0.27,
+      "skinRatio": 0.25,
+      "motionScore": 0.05
+    }
+  ]
+}

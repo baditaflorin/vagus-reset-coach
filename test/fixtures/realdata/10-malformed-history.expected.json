@@ -1,0 +1,7 @@
+{
+  "ready": true,
+  "minConfidence": 0.62,
+  "maxConfidence": 1,
+  "reasonCodes": ["usable-face-signal"],
+  "skippedHistoryRecords": 2
+}

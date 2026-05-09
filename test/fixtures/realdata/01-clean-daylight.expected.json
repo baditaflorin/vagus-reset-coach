@@ -1,0 +1,6 @@
+{
+  "ready": true,
+  "minConfidence": 0.72,
+  "maxConfidence": 1,
+  "reasonCodes": ["usable-face-signal"]
+}

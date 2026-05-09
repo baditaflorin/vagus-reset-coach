@@ -1,0 +1,15 @@
+{
+  "id": "camera-denied",
+  "description": "User denies camera permission and continues breath-only.",
+  "cameraAvailable": false,
+  "metrics": {
+    "bpm": null,
+    "rmssdMs": null,
+    "quality": 0,
+    "sampleCount": 0,
+    "peakCount": 0,
+    "intervalsMs": [],
+    "status": "warming"
+  },
+  "samples": []
+}
