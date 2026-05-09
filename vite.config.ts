@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { fileURLToPath, URL } from "node:url";
 
 import react from "@vitejs/plugin-react";
@@ -10,6 +11,21 @@ const pkg = JSON.parse(
 ) as {
   version: string;
 };
+
+function resolveCommit() {
+  if (process.env.VITE_APP_COMMIT) {
+    return process.env.VITE_APP_COMMIT;
+  }
+
+  try {
+    return execSync("git rev-parse --short HEAD", {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "unknown";
+  }
+}
 
 export default defineConfig({
   base: "/vagus-reset-coach/",
@@ -48,7 +64,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(
       process.env.VITE_APP_VERSION ?? pkg.version,
     ),
-    __APP_COMMIT__: JSON.stringify(process.env.VITE_APP_COMMIT ?? "local"),
+    __APP_COMMIT__: JSON.stringify(resolveCommit()),
   },
   resolve: {
     alias: {
