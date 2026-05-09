@@ -2,23 +2,22 @@
 
 Date: 2026-05-09
 
-Scope: README, architecture docs, ADRs, and visible in-app copy before Phase 3 completeness implementation.
+Scope: README, architecture docs, ADRs, and visible in-app copy after the main Phase 3 completeness implementation batch.
 
 ## Status Grid
 
-| Claim                                                       | Status            | Notes                                                                                                                |
-| ----------------------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Private browser-based two-minute breath coach               | Shipped fully     | Matches the current app.                                                                                             |
-| Webcam rPPG with local HRV/session logging                  | Shipped fully     | Works as documented.                                                                                                 |
-| DuckDB-WASM analytics                                       | Shipped fully     | Used lazily for summaries with in-memory fallback.                                                                   |
-| Version and commit shown in the GitHub Pages app            | Shipped fully     | Static fallback plus runtime refresh exist.                                                                          |
-| PWA / offline-friendly shell                                | Shipped partially | Service worker is present, but user-owned state import/export is not complete enough to call the app fully portable. |
-| `IndexedDB / OPFS` local data                               | Not shipped       | The implementation uses IndexedDB only. OPFS is claimed in README and architecture but not implemented.              |
-| Clear app data in the app or browser removes saved sessions | Shipped partially | History clearing exists, but app preferences do not yet persist, so there is no full app-state reset concept.        |
-| Export workflows supported by DuckDB-WASM                   | Shipped partially | JSON export exists, but more complete restore and machine-facing export contracts do not.                            |
+| Claim                                                       | Status            | Notes                                                                                     |
+| ----------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------- |
+| Private browser-based two-minute breath coach               | Shipped fully     | Matches the current app.                                                                  |
+| Webcam rPPG with local HRV/session logging                  | Shipped fully     | Works as documented.                                                                      |
+| DuckDB-WASM analytics                                       | Shipped fully     | Used lazily for summaries with in-memory fallback.                                        |
+| Version and commit shown in the GitHub Pages app            | Shipped fully     | Static fallback plus runtime refresh exist.                                               |
+| PWA / offline-friendly shell                                | Shipped partially | The shell works offline, but live camera measurement still depends on browser permission. |
+| IndexedDB local data                                        | Shipped fully     | README and architecture now match the implementation.                                     |
+| Clear app data in the app or browser removes saved sessions | Shipped fully     | History clear, settings reset, and full local-data reset now exist.                       |
+| Exported state can be restored locally                      | Shipped fully     | JSON import now supports current and legacy Phase 2 exports.                              |
 
-## Highest-Priority Mismatches
+## Remaining Mismatches
 
-1. `OPFS` is documented but not implemented.
-2. Export is described more broadly than the current one-way JSON download.
-3. "Offline-friendly" is directionally true, but ownership and restore workflows are not yet complete enough for a stranger doing repeat use.
+1. "Offline-friendly" should still be read as shell and history portability, not guaranteed offline camera support in every browser.
+2. DuckDB is used for summaries rather than broad export formats such as CSV or Parquet.

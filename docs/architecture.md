@@ -13,7 +13,7 @@ C4Context
   System_Boundary(pages, "GitHub Pages") {
     System(app, "Static React App", "Webcam rPPG, breath pacing, local history")
   }
-  SystemDb(local, "Browser Storage", "IndexedDB / OPFS")
+  SystemDb(local, "Browser Storage", "IndexedDB")
   Rel(user, app, "Uses over HTTPS")
   Rel(app, local, "Stores sessions locally")
 ```
@@ -29,7 +29,7 @@ flowchart LR
     duck["DuckDB-WASM analytics"]
     sw["Service worker"]
   end
-  storage["IndexedDB / OPFS"]
+  storage["IndexedDB"]
   camera["Webcam"]
   speaker["Audio output"]
   shell --> rppg

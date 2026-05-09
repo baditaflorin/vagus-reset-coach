@@ -2,7 +2,7 @@
 
 Date: 2026-05-09
 
-Scope: current Phase 2.1 app before Phase 3 completeness implementation.
+Scope: current app after the main Phase 3 completeness implementation batch.
 
 ## Status Grid
 

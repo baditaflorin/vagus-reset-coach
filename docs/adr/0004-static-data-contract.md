@@ -28,7 +28,7 @@ Persist sessions locally with schema version `v1`:
 }
 ```
 
-Build metadata exposes the package version through a Vite constant. The visible commit is read from the public GitHub commits API at runtime, with a local fallback when offline or rate-limited.
+Build metadata exposes the package version through a Vite constant. The visible commit uses a bundled local fallback and may refresh from the public GitHub commits API at runtime when available.
 
 ## Consequences
 

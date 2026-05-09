@@ -139,6 +139,7 @@ function App() {
     null,
   );
   const [ownershipNotice, setOwnershipNotice] = useState<string | null>(null);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
   const [interruptedNotice, setInterruptedNotice] = useState<string | null>(
     () => {
       const interruptedAt = readInterruptedSession();
@@ -402,6 +403,7 @@ function App() {
     }
     await clearSessions();
     setLastRecord(null);
+    setImportNotice(null);
     setOwnershipNotice("Local session history cleared.");
     await refreshHistory();
   }, [refreshHistory, sessions.length]);
@@ -414,6 +416,7 @@ function App() {
       ? DEFAULT_BREATH_SETTINGS
       : manualBreathSettings(defaults.manualBreathsPerMinute);
     setBreathSettings(settingsRef.current);
+    setImportNotice(null);
     setOwnershipNotice("Settings restored to the local defaults.");
   }, []);
 
@@ -437,6 +440,7 @@ function App() {
     setPendingRecord(null);
     setRecoverableError(null);
     setInterruptedNotice(null);
+    setImportNotice(null);
     setOwnershipNotice("All local app data cleared from this browser.");
     await refreshHistory();
   }, [refreshHistory]);
@@ -471,6 +475,7 @@ function App() {
         sessions,
       }),
     );
+    setImportNotice(null);
     setOwnershipNotice("Local app state exported as vagus-reset-state.json.");
   }, [appSettings, sessions]);
 
@@ -487,13 +492,14 @@ function App() {
         settingsRef.current = nextBreathSettings;
         setBreathSettings(nextBreathSettings);
         setInterruptedNotice(null);
-        setOwnershipNotice(
+        await refreshHistory();
+        setLastRecord(imported.sessions[0] ?? null);
+        setOwnershipNotice(null);
+        setImportNotice(
           `Imported ${imported.sessions.length} session record${imported.sessions.length === 1 ? "" : "s"} and restored local settings.`,
         );
-        setLastRecord(imported.sessions[0] ?? null);
-        await refreshHistory();
       } catch {
-        setOwnershipNotice(
+        setImportNotice(
           "Import failed. Use a Vagus Reset Coach export JSON file or a legacy Phase 2 history export.",
         );
       }
@@ -514,13 +520,14 @@ function App() {
         settingsRef.current = nextBreathSettings;
         setBreathSettings(nextBreathSettings);
         setInterruptedNotice(null);
-        setOwnershipNotice(
+        await refreshHistory();
+        setLastRecord(imported.sessions[0] ?? null);
+        setOwnershipNotice(null);
+        setImportNotice(
           `Imported ${imported.sessions.length} session record${imported.sessions.length === 1 ? "" : "s"} from ${file.name}.`,
         );
-        setLastRecord(imported.sessions[0] ?? null);
-        await refreshHistory();
       } catch {
-        setOwnershipNotice(
+        setImportNotice(
           "That file could not be imported. Choose a Vagus Reset Coach JSON export and try again.",
         );
       }
@@ -536,8 +543,10 @@ function App() {
           lowConfidenceCount: analytics.lowConfidenceCount,
         }),
       );
+      setImportNotice(null);
       setOwnershipNotice("Session summary copied to the clipboard.");
     } catch {
+      setImportNotice(null);
       setOwnershipNotice(
         "Clipboard write was blocked. Use the export button if you need a portable copy.",
       );
@@ -629,8 +638,10 @@ function App() {
       await navigator.clipboard.writeText(
         JSON.stringify(debugSnapshot, null, 2),
       );
+      setImportNotice(null);
       setOwnershipNotice("Debug snapshot copied to the clipboard.");
     } catch {
+      setImportNotice(null);
       setOwnershipNotice(
         "Clipboard write was blocked. Copy the debug panel text manually instead.",
       );
@@ -797,7 +808,7 @@ function App() {
           <SessionHistory
             sessions={sessions}
             analytics={analytics}
-            importStatus={ownershipNotice}
+            importStatus={importNotice}
             onClear={clearHistory}
             onCopySummary={() => void copySummary()}
             onExport={exportHistory}

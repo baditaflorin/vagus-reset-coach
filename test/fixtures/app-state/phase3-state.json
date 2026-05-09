@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "appVersion": "0.3.0",
+  "exportedAt": "2026-05-09T12:00:00.000Z",
+  "source": "vagus-reset-coach",
+  "settings": {
+    "schemaVersion": 1,
+    "audioEnabled": false,
+    "adaptiveBreath": false,
+    "manualBreathsPerMinute": 5.4
+  },
+  "sessions": [
+    {
+      "id": "fixture-session-1",
+      "schemaVersion": 1,
+      "startedAt": "2026-05-09T11:58:00.000Z",
+      "durationSec": 120,
+      "baselineBpm": 84,
+      "endingBpm": 76,
+      "rmssdMs": 38,
+      "breathsPerMinute": 5.4,
+      "coherenceScore": 82,
+      "quality": 0.81,
+      "measurementConfidence": 0.78,
+      "confidenceLabel": "high",
+      "qualityReasons": ["usable-face-signal"],
+      "fieldConfidence": {
+        "baselineBpm": 0.78,
+        "endingBpm": 0.78,
+        "rmssdMs": 0.78,
+        "coherenceScore": 0.78
+      },
+      "provenance": {
+        "appVersion": "0.3.0",
+        "schemaVersion": 1,
+        "algorithmVersion": "rppg-v2",
+        "generatedAt": "2026-05-09T12:00:00.000Z",
+        "source": "webcam-rppg",
+        "reasonCodes": ["usable-face-signal"]
+      }
+    }
+  ]
+}

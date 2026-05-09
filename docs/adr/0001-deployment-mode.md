@@ -10,7 +10,7 @@ V1 must guide a two-minute stress reset without a wearable, avoid secrets, prote
 
 ## Decision
 
-Use Mode A: Pure GitHub Pages. The app runs entirely in the browser with `getUserMedia`, Canvas, Web Audio, DuckDB-WASM, IndexedDB, and OPFS/local browser storage.
+Use Mode A: Pure GitHub Pages. The app runs entirely in the browser with `getUserMedia`, Canvas, Web Audio, DuckDB-WASM, and IndexedDB/local browser storage.
 
 ## Consequences
 

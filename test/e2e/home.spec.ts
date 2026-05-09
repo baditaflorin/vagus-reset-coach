@@ -1,4 +1,16 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const version = JSON.parse(
+  readFileSync(resolve(process.cwd(), "package.json"), "utf8"),
+) as {
+  version: string;
+};
+const fixturePath = resolve(
+  process.cwd(),
+  "test/fixtures/app-state/phase3-state.json",
+);
 
 test("loads the public Pages build and exposes project metadata", async ({
   page,
@@ -22,8 +34,23 @@ test("loads the public Pages build and exposes project metadata", async ({
     "href",
     "https://www.paypal.com/paypalme/florinbadita",
   );
-  await expect(page.getByText(/Version 0\.2\.1/)).toBeVisible();
+  await expect(
+    page.getByText(new RegExp(`Version ${version.version}`)),
+  ).toBeVisible();
   await expect(page.getByText(/Commit [a-z0-9]+/)).toBeVisible();
   await expect(page.getByRole("button", { name: /Start/ })).toBeEnabled();
+  await page.setInputFiles('input[type="file"]', fixturePath);
+  await expect(
+    page.getByText(/Imported 1 session record from phase3-state\.json\./),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("complementary").getByText(/5\.4 breaths\/min/),
+  ).toBeVisible();
+  await expect(page.getByText(/RMSSD 38 ms/).first()).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("complementary").getByText(/5\.4 breaths\/min/),
+  ).toBeVisible();
+  await expect(page.getByText(/RMSSD 38 ms/).first()).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });

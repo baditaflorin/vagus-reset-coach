@@ -10,7 +10,7 @@ Repository: https://github.com/baditaflorin/vagus-reset-coach
 
 Support: https://www.paypal.com/paypalme/florinbadita
 
-Vagus Reset Coach is a private, browser-based two-minute breath coach that estimates pulse from webcam rPPG, guides breathing with audio and visuals, and logs progress locally.
+Vagus Reset Coach is a private, browser-based two-minute breath coach that estimates pulse from webcam rPPG, guides breathing with audio and visuals, and keeps progress local to the browser.
 
 ![Vagus Reset Coach screenshot](docs/screenshot.png)
 
@@ -24,9 +24,17 @@ make test
 make build
 ```
 
+## Verified Features
+
+- `Camera` starts a local webcam preview and `Start` runs a reset even when the browser falls back to breath-only mode.
+- Local settings persist across reload, including audio cues and adaptive/manual pacing preference.
+- `Export` writes a versioned `vagus-reset-state.json` file and `Import` restores that state from file, drop, paste, or clipboard.
+- `Copy` produces a portable plain-text summary and `Print` opens a print-friendly local report.
+- Version and commit are shown in the published GitHub Pages build.
+
 ## Architecture
 
-This is a Mode A GitHub Pages app. It runs fully in the browser using webcam APIs, Web Audio, DuckDB-WASM, IndexedDB/OPFS, and static assets.
+This is a Mode A GitHub Pages app. It runs fully in the browser using webcam APIs, Web Audio, DuckDB-WASM, IndexedDB, and static assets.
 
 ```mermaid
 flowchart LR
@@ -34,10 +42,16 @@ flowchart LR
   P --> C["Webcam rPPG engine"]
   P --> A["Web Audio pacer"]
   P --> D["DuckDB-WASM analytics"]
-  D --> S["IndexedDB / OPFS local data"]
+  D --> S["IndexedDB local data"]
 ```
 
 Read the ADRs in `docs/adr/` for the design record and `docs/privacy.md` for the privacy model.
+
+## Limitations
+
+- Browser camera permissions, lighting, and motion still determine whether webcam HRV is usable.
+- Export/import is local-file based only. There is no cloud sync or shareable URL.
+- This is educational wellness software, not a medical device.
 
 ## Checks
 

@@ -10,7 +10,7 @@ Session history is private biometric-derived data and should remain local.
 
 ## Decision
 
-Use IndexedDB for durable session records. Lazy-load DuckDB-WASM for query and export workflows, with OPFS/IndexedDB-compatible browser storage where available and an in-memory fallback.
+Use IndexedDB for durable session records. Use local storage for small app preferences. Lazy-load DuckDB-WASM for query workflows, with an in-memory fallback if analytics initialization fails.
 
 ## Consequences
 
