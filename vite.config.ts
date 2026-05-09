@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { execSync } from "node:child_process";
 import { fileURLToPath, URL } from "node:url";
 
 import react from "@vitejs/plugin-react";
@@ -18,10 +17,9 @@ function resolveCommit() {
   }
 
   try {
-    return execSync("git rev-parse --short HEAD", {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
+    return readFileSync(new URL("./docs/commit.txt", import.meta.url), "utf8")
+      .trim()
+      .slice(0, 12);
   } catch {
     return "unknown";
   }
