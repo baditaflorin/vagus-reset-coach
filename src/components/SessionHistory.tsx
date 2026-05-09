@@ -51,13 +51,17 @@ export function SessionHistory({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <MiniStat label="Sessions" value={analytics.sessionCount.toString()} />
         <MiniStat
           label="Average"
           value={analytics.averageCoherence.toString()}
         />
         <MiniStat label="Best" value={analytics.bestCoherence.toString()} />
+        <MiniStat
+          label="Low conf"
+          value={analytics.lowConfidenceCount.toString()}
+        />
       </div>
 
       <Sparkline points={points} />
@@ -76,7 +80,8 @@ export function SessionHistory({
                 </p>
                 <p className="text-sm text-stone-600">
                   {session.durationSec}s · RMSSD {session.rmssdMs ?? "n/a"} ms ·
-                  quality {Math.round(session.quality * 100)}%
+                  quality {Math.round(session.quality * 100)}% ·{" "}
+                  {session.confidenceLabel} confidence
                 </p>
               </div>
               <strong>{session.coherenceScore}</strong>
