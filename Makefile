@@ -38,9 +38,10 @@ fmt: ## Autoformat source files
 pages-preview: ## Serve docs/ as Pages would
 	npm run pages-preview
 
-release: ## Create v0.1.0 tag
-	git tag v0.1.0
-	git push origin v0.1.0
+release: ## Create and push a semver tag from package.json
+	@version=$$(node -p "require('./package.json').version"); \
+	git tag "v$$version"; \
+	git push origin "v$$version"
 
 clean: ## Remove local build scratch files
 	rm -rf coverage tmp node_modules/.tmp test-results playwright-report

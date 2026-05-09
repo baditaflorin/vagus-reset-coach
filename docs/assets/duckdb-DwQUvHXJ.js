@@ -3,6 +3,7 @@ import{a as e,i as t,n,o as r,r as i,s as a,t as o}from"./duckdb-CXswpajd.js";va
           SELECT
             coherenceScore,
             rmssdMs,
+            confidenceLabel,
             row_number() OVER (ORDER BY startedAt DESC) AS recency
           FROM sessions
         )
@@ -11,6 +12,7 @@ import{a as e,i as t,n,o as r,r as i,s as a,t as o}from"./duckdb-CXswpajd.js";va
           avg(coherenceScore) AS average_coherence,
           avg(rmssdMs) AS average_rmssd_ms,
           max(coherenceScore) AS best_coherence,
-          avg(CASE WHEN recency <= 7 THEN coherenceScore ELSE NULL END) AS last_seven_average
+          avg(CASE WHEN recency <= 7 THEN coherenceScore ELSE NULL END) AS last_seven_average,
+          sum(CASE WHEN confidenceLabel = 'low' THEN 1 ELSE 0 END) AS low_confidence_count
         FROM ranked
-      `)).toArray()[0]);return{sessionCount:Number(t.session_count),averageCoherence:Math.round(t.average_coherence??0),averageRmssdMs:t.average_rmssd_ms===null?null:Math.round(t.average_rmssd_ms),bestCoherence:Math.round(t.best_coherence??0),lastSevenAverage:Math.round(t.last_seven_average??0)}}finally{await e.close()}}finally{await o.terminate()}}function l(e){return e&&typeof e==`object`&&`toJSON`in e&&typeof e.toJSON==`function`?e.toJSON():e}export{c as summarizeSessionsWithDuckDb};
+      `)).toArray()[0]);return{sessionCount:Number(t.session_count),averageCoherence:Math.round(t.average_coherence??0),averageRmssdMs:t.average_rmssd_ms===null?null:Math.round(t.average_rmssd_ms),bestCoherence:Math.round(t.best_coherence??0),lastSevenAverage:Math.round(t.last_seven_average??0),lowConfidenceCount:Number(t.low_confidence_count??0)}}finally{await e.close()}}finally{await o.terminate()}}function l(e){return e&&typeof e==`object`&&`toJSON`in e&&typeof e.toJSON==`function`?e.toJSON():e}export{c as summarizeSessionsWithDuckDb};

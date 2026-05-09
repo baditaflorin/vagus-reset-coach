@@ -2,7 +2,7 @@
 
 ![Live GitHub Pages](https://img.shields.io/badge/live-GitHub%20Pages-0f766e)
 ![Mode A](https://img.shields.io/badge/deployment-Mode%20A%20static-d85f45)
-![Version](https://img.shields.io/badge/version-0.1.0-b7791f)
+![Version](https://img.shields.io/badge/version-0.2.0-b7791f)
 
 Live site: https://baditaflorin.github.io/vagus-reset-coach/
 
