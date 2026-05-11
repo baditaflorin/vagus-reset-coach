@@ -1,6 +1,11 @@
 import { HeartHandshake, ShieldCheck, Star } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { OnboardingBanner } from "./components/OnboardingBanner";
+import {
+  dismissOnboarding,
+  shouldShowOnboarding,
+} from "./components/onboardingStorage";
 import { BreathAudio } from "./features/breath/audio";
 import {
   DEFAULT_BREATH_SETTINGS,
@@ -127,6 +132,11 @@ function App() {
   );
   const [running, setRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(() =>
+    shouldShowOnboarding(
+      typeof window === "undefined" ? null : window.localStorage,
+    ),
+  );
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsSummary>(() =>
     summarizeInMemory([]),
@@ -678,8 +688,17 @@ function App() {
         </nav>
       </header>
 
-      <main className="mx-auto grid w-full max-w-7xl gap-5 px-4 pb-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(340px,0.7fr)]">
+      <main className="mx-auto grid w-full max-w-7xl gap-5 px-4 pb-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.7fr)]">
         <section className="space-y-5">
+          {showOnboarding ? (
+            <OnboardingBanner
+              onDismiss={() => {
+                dismissOnboarding(window.localStorage);
+                setShowOnboarding(false);
+              }}
+              onStartCamera={() => void startCamera()}
+            />
+          ) : null}
           <div className="coach-panel">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -720,7 +739,7 @@ function App() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
             <MetricTile
               label="Heart rate"
               value={formatMetric(metrics.bpm, " bpm")}

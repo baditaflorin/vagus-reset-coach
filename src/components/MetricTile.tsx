@@ -19,12 +19,19 @@ export function MetricTile({
   tone = "ink",
 }: MetricTileProps) {
   return (
-    <div className={`rounded-lg border p-4 ${toneClasses[tone]}`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-current/65">
+    <div className={`rounded-lg border p-3 sm:p-4 ${toneClasses[tone]}`}>
+      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-current/65 sm:text-xs">
         {label}
       </p>
-      <p className="mt-2 text-3xl font-semibold leading-none">{value}</p>
-      <p className="mt-2 text-sm leading-5 text-current/70">{detail}</p>
+      {/* The value used to be locked at text-3xl, which crammed against the
+       * tile edge on a 360px portrait phone after the 4-up grid collapsed
+       * to 2-up. Step it down on small viewports. */}
+      <p className="mt-2 text-2xl font-semibold leading-none sm:text-3xl">
+        {value}
+      </p>
+      <p className="mt-2 line-clamp-3 text-[0.85rem] leading-5 text-current/70 sm:text-sm">
+        {detail}
+      </p>
     </div>
   );
 }

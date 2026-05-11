@@ -46,7 +46,7 @@ export function SessionHistory({
     event.currentTarget.value = "";
   };
 
-  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+  const handleDrop = (event: DragEvent<HTMLElement>) => {
     event.preventDefault();
     setDragActive(false);
     const file = event.dataTransfer.files?.[0];
@@ -123,7 +123,7 @@ export function SessionHistory({
 
       <Sparkline points={points} />
 
-      <div
+      <details
         className={`mt-4 rounded-lg border border-dashed p-4 ${
           dragActive
             ? "border-teal-700 bg-teal-50"
@@ -134,11 +134,12 @@ export function SessionHistory({
         onDragOver={(event) => event.preventDefault()}
         onDrop={handleDrop}
       >
-        <p className="text-sm font-semibold text-stone-950">
+        <summary className="cursor-pointer text-sm font-semibold text-stone-950">
           Restore exported state
-        </p>
+        </summary>
         <p className="mt-1 text-sm leading-6 text-stone-600">
-          Drop a `vagus-reset-state.json` file here or paste exported JSON.
+          Drop a <code>vagus-reset-state.json</code> file here or paste exported
+          JSON.
         </p>
         <textarea
           className="mt-3 min-h-28 w-full rounded-lg border border-stone-200 bg-white p-3 text-sm text-stone-700"
@@ -180,12 +181,19 @@ export function SessionHistory({
             Read clipboard
           </button>
         </div>
-        {importStatus && (
-          <p className="mt-3 text-sm leading-6 text-stone-600">
-            {importStatus}
-          </p>
-        )}
-      </div>
+      </details>
+      {importStatus && (
+        // Surface the import status outside the <details> so a user who
+        // imported via the header file button still gets confirmation
+        // even when the restore-from-JSON drawer is collapsed.
+        <p
+          className="mt-3 rounded-md border border-teal-700/30 bg-teal-50 p-3 text-sm leading-6 text-teal-950"
+          role="status"
+          aria-live="polite"
+        >
+          {importStatus}
+        </p>
+      )}
 
       <div className="mt-4 space-y-3">
         {sessions.length === 0 ? (
