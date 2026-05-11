@@ -27,6 +27,18 @@ export const DEFAULT_BREATH_SETTINGS: BreathSettings = {
   holdBottomSec: 0,
 };
 
+// Range of cadences we are willing to coach toward. 3.5 bpm (~17s cycles) is
+// near the slow end of practical resonant breathing; 6.5 bpm is the relaxed
+// upper end. Resonance for most adults sits around 5–6 bpm, so the default
+// floats inside that band and the elevated-stress branch slows further.
+const MIN_CADENCE_BPM = 3.5;
+const MAX_CADENCE_BPM = 6.5;
+const MIN_INHALE_SEC = 3.2;
+const STRESS_BPM = 90;
+const CALM_BPM = 60;
+const POOR_HRV_MS = 18;
+const GOOD_HRV_MS = 55;
+
 export function recommendBreathSettings(
   metrics: PulseMetrics | null,
 ): BreathSettings {
@@ -34,15 +46,39 @@ export function recommendBreathSettings(
     return DEFAULT_BREATH_SETTINGS;
   }
 
-  const calmerCadence = metrics.bpm > 86 ? 5.5 : 6;
-  const exhaleSec = metrics.bpm > 86 ? 6.8 : 6;
-  const inhaleSec = Math.max(3.8, 60 / calmerCadence - exhaleSec);
+  // Stress proxy in [0, 1]: higher heart rate and lower HRV both push us
+  // toward the slower end of the cadence range. We blend the two signals so
+  // either one can drive adaptation when the other is missing or marginal.
+  const bpmStress = clamp(
+    (metrics.bpm - CALM_BPM) / (STRESS_BPM - CALM_BPM),
+    0,
+    1,
+  );
+  const hrvStress =
+    metrics.rmssdMs === null
+      ? bpmStress
+      : clamp(
+          (GOOD_HRV_MS - metrics.rmssdMs) / (GOOD_HRV_MS - POOR_HRV_MS),
+          0,
+          1,
+        );
+  const stress = (bpmStress + hrvStress) / 2;
+
+  const cadence =
+    MAX_CADENCE_BPM - stress * (MAX_CADENCE_BPM - MIN_CADENCE_BPM);
+  const cycleSec = 60 / cadence;
+  // Hold a 1:1.6 inhale:exhale ratio. Longer exhales than inhales dominate
+  // vagal afferent traffic via baroreflex loading; 1.6 keeps the inhale long
+  // enough to feel natural (vs. the 1:2 box-breathing extreme).
+  const exhaleSec = (cycleSec * 1.6) / 2.6;
+  const inhaleSec = Math.max(MIN_INHALE_SEC, cycleSec - exhaleSec);
+  const adjustedExhale = cycleSec - inhaleSec;
 
   return {
-    breathsPerMinute: roundTo(60 / (inhaleSec + exhaleSec), 1),
-    inhaleSec,
+    breathsPerMinute: roundTo(60 / (inhaleSec + adjustedExhale), 1),
+    inhaleSec: roundTo(inhaleSec, 2),
     holdTopSec: 0,
-    exhaleSec,
+    exhaleSec: roundTo(adjustedExhale, 2),
     holdBottomSec: 0,
   };
 }

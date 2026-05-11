@@ -106,6 +106,7 @@ function App() {
   const lastPhaseRef = useRef<string | null>(null);
   const settingsRef = useRef<BreathSettings>(DEFAULT_BREATH_SETTINGS);
   const appSettingsRef = useRef<AppSettings>(getDefaultAppSettings());
+  const lastAdaptedAtRef = useRef<number>(0);
 
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -302,8 +303,9 @@ function App() {
             appSettingsRef.current.adaptiveBreath &&
             sessionRef.current?.running &&
             nextDiagnostics.ready &&
-            sample.timeMs % 4_000 < 120
+            sample.timeMs - lastAdaptedAtRef.current >= 3_000
           ) {
+            lastAdaptedAtRef.current = sample.timeMs;
             const recommended = recommendBreathSettings(nextMetrics);
             if (
               Math.abs(
@@ -375,6 +377,7 @@ function App() {
     setElapsedMs(0);
     setRunning(true);
     lastPhaseRef.current = null;
+    lastAdaptedAtRef.current = 0;
     setBreathState(getBreathState(0, settingsRef.current));
   }, [startCamera]);
 
