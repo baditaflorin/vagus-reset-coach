@@ -36,8 +36,8 @@ import {
   saveAppSettings,
 } from "./features/app-state/settings";
 import type { AppSettings } from "./features/app-state/types";
-import { evaluateSignalDiagnostics } from "./features/rppg/diagnostics";
 import { PulseEstimator } from "./features/rppg/rppg";
+import { processVideoFrameSafely } from "./features/rppg/safeSample";
 import type { PulseMetrics, SignalDiagnostics } from "./features/rppg/types";
 import {
   defaultFaceRoi,
@@ -296,14 +296,18 @@ function App() {
       const video = videoRef.current;
       const sampler = samplerRef.current;
       if (video && sampler) {
-        const sample = sampler.sample(video, defaultFaceRoi());
-        if (sample) {
-          const nextMetrics = estimatorRef.current.addSample(sample);
-          const nextDiagnostics = evaluateSignalDiagnostics({
-            cameraAvailable: true,
-            metrics: nextMetrics,
-            samples: estimatorRef.current.getSamples(),
-          });
+        // Any failure inside the webcam/rPPG pipeline is caught and reported
+        // as `null` here so it can never prevent the breath-timer logic
+        // below from running — a guided breathing session must not freeze
+        // silently just because the optional HRV signal processing broke.
+        const result = processVideoFrameSafely(
+          video,
+          defaultFaceRoi(),
+          sampler,
+          estimatorRef.current,
+        );
+        if (result) {
+          const { metrics: nextMetrics, diagnostics: nextDiagnostics } = result;
           metricsRef.current = nextMetrics;
           diagnosticsRef.current = nextDiagnostics;
           setMetrics(nextMetrics);
@@ -313,9 +317,9 @@ function App() {
             appSettingsRef.current.adaptiveBreath &&
             sessionRef.current?.running &&
             nextDiagnostics.ready &&
-            sample.timeMs - lastAdaptedAtRef.current >= 3_000
+            performance.now() - lastAdaptedAtRef.current >= 3_000
           ) {
-            lastAdaptedAtRef.current = sample.timeMs;
+            lastAdaptedAtRef.current = performance.now();
             const recommended = recommendBreathSettings(nextMetrics);
             if (
               Math.abs(
